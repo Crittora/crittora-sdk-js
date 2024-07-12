@@ -1,7 +1,13 @@
 import axios from "axios";
 import crypto from "crypto-js";
 
-import { EncryptParams, EncryptResponse, Config } from "./types";
+import {
+  EncryptParams,
+  EncryptResponse,
+  Config,
+  DecryptParams,
+  DecryptResponse,
+} from "./types";
 
 const BASE_API_URL =
   "https://qh8enufhje.execute-api.us-east-1.amazonaws.com/sbx/event";
@@ -69,8 +75,6 @@ class Crittora {
       ClientId: clientId,
     };
 
-    console.log("Request Body:", JSON.stringify(body));
-
     try {
       const response = await axios.post(COGNITO_API_URL, body, {
         headers: {
@@ -78,8 +82,6 @@ class Crittora {
           "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
         },
       });
-
-      console.log("Response:", response.data);
 
       const responseData = response.data;
       if (responseData.AuthenticationResult) {
@@ -129,6 +131,36 @@ class Crittora {
         throw new Error(`Failed to encrypt data: ${error.message}`);
       } else {
         throw new Error("Failed to encrypt data");
+      }
+    }
+  }
+
+  public async decrypt(params: DecryptParams): Promise<DecryptResponse> {
+    await this.fetchAccessToken();
+
+    console.log("Decrypt Params:", params);
+
+    try {
+      const response = await axios.post(BASE_API_URL, params, {
+        headers: {
+          Authorization: `Bearer ${this.currentAccessToken}`,
+          api_key: this.config.api_key,
+          access_key: this.config.access_key,
+          secret_key: this.config.secret_key,
+          "Content-Type": "application/json",
+        },
+      });
+      console.log("Decrypted Data Response:", response.data);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Error Response:", error.response?.data || error.message);
+        throw new Error(`Failed to decrypt data: ${error.message}`);
+      } else if (error instanceof Error) {
+        console.error("Error:", error.message);
+        throw new Error(`Failed to decrypt data: ${error.message}`);
+      } else {
+        throw new Error("Failed to decrypt data");
       }
     }
   }

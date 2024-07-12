@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import axios from "axios";
 import crypto from "crypto-js";
 const BASE_API_URL = "https://qh8enufhje.execute-api.us-east-1.amazonaws.com/sbx/event";
+const COGNITO_API_URL = "https://cognito-idp.us-east-1.amazonaws.com/";
 class Crittora {
     constructor(config) {
         this.currentAccessToken = null;
@@ -47,15 +48,13 @@ class Crittora {
                 AuthFlow: "USER_PASSWORD_AUTH",
                 ClientId: clientId,
             };
-            console.log("Request Body:", JSON.stringify(body));
             try {
-                const response = yield axios.post("https://cognito-idp.us-east-1.amazonaws.com/", body, {
+                const response = yield axios.post(COGNITO_API_URL, body, {
                     headers: {
                         "Content-Type": "application/x-amz-json-1.1",
                         "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
                     },
                 });
-                console.log("Response:", response.data);
                 const responseData = response.data;
                 if (responseData.AuthenticationResult) {
                     this.currentAccessToken = responseData.AuthenticationResult.IdToken;
@@ -111,6 +110,39 @@ class Crittora {
                 }
                 else {
                     throw new Error("Failed to encrypt data");
+                }
+            }
+        });
+    }
+    decrypt(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            yield this.fetchAccessToken();
+            console.log("Decrypt Params:", params);
+            try {
+                const response = yield axios.post(BASE_API_URL, params, {
+                    headers: {
+                        Authorization: `Bearer ${this.currentAccessToken}`,
+                        api_key: this.config.api_key,
+                        access_key: this.config.access_key,
+                        secret_key: this.config.secret_key,
+                        "Content-Type": "application/json",
+                    },
+                });
+                console.log("Decrypted Data Response:", response.data);
+                return response.data;
+            }
+            catch (error) {
+                if (axios.isAxiosError(error)) {
+                    console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
+                    throw new Error(`Failed to decrypt data: ${error.message}`);
+                }
+                else if (error instanceof Error) {
+                    console.error("Error:", error.message);
+                    throw new Error(`Failed to decrypt data: ${error.message}`);
+                }
+                else {
+                    throw new Error("Failed to decrypt data");
                 }
             }
         });
