@@ -1,0 +1,25 @@
+{
+  "name": "crittora-sdk-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "Erik Rowan <erik@crittora.com>, Gerardo I. Ornelas <gerardo@crittora.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@types/node": "^20.14.10",
+    "axios": "^1.7.2",
+    "crypto-js": "^4.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.3"
+  },
+  "devDependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/crypto-js": "^4.2.2"
+  }
+}

@@ -1,0 +1,119 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import axios from "axios";
+import crypto from "crypto-js";
+const BASE_API_URL = "https://qh8enufhje.execute-api.us-east-1.amazonaws.com/sbx/event";
+class Crittora {
+    constructor(config) {
+        this.currentAccessToken = null;
+        this.accessTokenExpiry = null;
+        this.config = config;
+        this.currentAccessToken = config.currentAccessToken || null;
+        this.accessTokenExpiry = config.accessTokenExpiry || null;
+    }
+    generateSecretHash(username, clientId, clientSecret) {
+        const message = username + clientId;
+        const hash = crypto.HmacSHA256(message, clientSecret);
+        return crypto.enc.Base64.stringify(hash);
+    }
+    fetchAccessToken() {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            const { credentialsUsername, credentialsPassword, cognitoPoolClientId, clientId, clientSecret, fetchTokenOnEveryRequest, } = this.config;
+            if (fetchTokenOnEveryRequest) {
+                this.currentAccessToken = null;
+                this.accessTokenExpiry = null;
+            }
+            const currentTime = new Date().getTime();
+            if (this.currentAccessToken &&
+                this.accessTokenExpiry &&
+                currentTime < this.accessTokenExpiry) {
+                return;
+            }
+            const secretHash = this.generateSecretHash(credentialsUsername, clientId, clientSecret);
+            const body = {
+                AuthParameters: {
+                    USERNAME: credentialsUsername,
+                    PASSWORD: credentialsPassword,
+                    SECRET_HASH: secretHash,
+                },
+                AuthFlow: "USER_PASSWORD_AUTH",
+                ClientId: clientId,
+            };
+            console.log("Request Body:", JSON.stringify(body));
+            try {
+                const response = yield axios.post("https://cognito-idp.us-east-1.amazonaws.com/", body, {
+                    headers: {
+                        "Content-Type": "application/x-amz-json-1.1",
+                        "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
+                    },
+                });
+                console.log("Response:", response.data);
+                const responseData = response.data;
+                if (responseData.AuthenticationResult) {
+                    this.currentAccessToken = responseData.AuthenticationResult.IdToken;
+                    this.accessTokenExpiry =
+                        new Date().getTime() +
+                            responseData.AuthenticationResult.ExpiresIn * 1000;
+                }
+                else {
+                    throw new Error("AuthenticationResult not found in the response");
+                }
+            }
+            catch (error) {
+                if (axios.isAxiosError(error)) {
+                    console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
+                    throw new Error(`Failed to fetch access token: ${error.message}`);
+                }
+                else if (error instanceof Error) {
+                    console.error("Error:", error.message);
+                    throw new Error(`Failed to fetch access token: ${error.message}`);
+                }
+                else {
+                    throw new Error("Failed to fetch access token");
+                }
+            }
+        });
+    }
+    encrypt(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            yield this.fetchAccessToken();
+            console.log("Encrypt Params:", params);
+            try {
+                const response = yield axios.post(BASE_API_URL, params, {
+                    headers: {
+                        Authorization: `Bearer ${this.currentAccessToken}`,
+                        api_key: this.config.api_key,
+                        access_key: this.config.access_key,
+                        secret_key: this.config.secret_key,
+                        "Content-Type": "application/json",
+                    },
+                });
+                console.log("Encrypted Data Response:", response.data);
+                return response.data;
+            }
+            catch (error) {
+                if (axios.isAxiosError(error)) {
+                    console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
+                    throw new Error(`Failed to encrypt data: ${error.message}`);
+                }
+                else if (error instanceof Error) {
+                    console.error("Error:", error.message);
+                    throw new Error(`Failed to encrypt data: ${error.message}`);
+                }
+                else {
+                    throw new Error("Failed to encrypt data");
+                }
+            }
+        });
+    }
+}
+export { Crittora };
