@@ -11,6 +11,8 @@ import {
   SignResponse,
   VerifyParams,
   VerifyResponse,
+  SignEncryptParams,
+  SignEncryptResponse,
 } from "./types";
 
 const BASE_API_URL =
@@ -166,7 +168,14 @@ class Crittora {
     );
   }
 
-  // Implement other methods: signEncrypt(), verifyDecrypt(), verify()
+  public async signEncrypt(
+    params: SignEncryptParams
+  ): Promise<SignEncryptResponse> {
+    return this.makeAuthenticatedRequest<SignEncryptResponse>(
+      params,
+      "Failed to verify data"
+    );
+  }
 }
 
 export { Crittora, Config, EncryptParams, EncryptResponse };

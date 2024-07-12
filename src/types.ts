@@ -9,7 +9,6 @@ export interface BaseResponse {
   encryptedData?: string;
   decrypted_data?: string;
   transactionId?: string;
-  signature?: string;
 }
 
 export interface Permission {
@@ -35,6 +34,8 @@ export interface SignParams {
 
 export interface VerifyParams extends BaseParams {}
 
+export interface SignEncryptParams extends BaseParams {}
+
 export interface EncryptResponse extends BaseResponse {
   encryptedData: string;
 }
@@ -50,6 +51,17 @@ export interface SignResponse extends BaseResponse {
 
 export interface VerifyResponse {
   is_valid_signature: boolean;
+}
+
+export interface SignEncryptResponse {
+  encryption: {
+    transactionId: string;
+    encrypted_data: string;
+  };
+  signature: {
+    transactionId: string;
+    signature: string;
+  };
 }
 
 // Configuration interface
