@@ -7,6 +7,10 @@ import {
   Config,
   DecryptParams,
   DecryptResponse,
+  SignParams,
+  SignResponse,
+  VerifyParams,
+  VerifyResponse,
 } from "./types";
 
 const BASE_API_URL =
@@ -93,79 +97,76 @@ class Crittora {
         throw new Error("AuthenticationResult not found in the response");
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error Response:", error.response?.data || error.message);
-        throw new Error(`Failed to fetch access token: ${error.message}`);
-      } else if (error instanceof Error) {
-        console.error("Error:", error.message);
-        throw new Error(`Failed to fetch access token: ${error.message}`);
-      } else {
-        throw new Error("Failed to fetch access token");
-      }
+      this.handleError(error, "Failed to fetch access token");
+    }
+  }
+
+  private async makeAuthenticatedRequest<T>(
+    params: any,
+    errorMessage: string
+  ): Promise<T> {
+    await this.fetchAccessToken();
+
+    console.log("Request Params:", params);
+
+    try {
+      const response = await axios.post(BASE_API_URL, params, {
+        headers: {
+          Authorization: `Bearer ${this.currentAccessToken}`,
+          api_key: this.config.api_key,
+          access_key: this.config.access_key,
+          secret_key: this.config.secret_key,
+          "Content-Type": "application/json",
+        },
+      });
+      console.log("Response Data:", response.data);
+      return response.data;
+    } catch (error) {
+      this.handleError(error, errorMessage);
+    }
+  }
+
+  private handleError(error: unknown, defaultMessage: string): never {
+    if (axios.isAxiosError(error)) {
+      console.error("Error Response:", error.response?.data || error.message);
+      throw new Error(`${defaultMessage}: ${error.message}`);
+    } else if (error instanceof Error) {
+      console.error("Error:", error.message);
+      throw new Error(`${defaultMessage}: ${error.message}`);
+    } else {
+      throw new Error(defaultMessage);
     }
   }
 
   public async encrypt(params: EncryptParams): Promise<EncryptResponse> {
-    await this.fetchAccessToken();
-
-    console.log("Encrypt Params:", params);
-
-    try {
-      const response = await axios.post(BASE_API_URL, params, {
-        headers: {
-          Authorization: `Bearer ${this.currentAccessToken}`,
-          api_key: this.config.api_key,
-          access_key: this.config.access_key,
-          secret_key: this.config.secret_key,
-          "Content-Type": "application/json",
-        },
-      });
-      console.log("Encrypted Data Response:", response.data);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error Response:", error.response?.data || error.message);
-        throw new Error(`Failed to encrypt data: ${error.message}`);
-      } else if (error instanceof Error) {
-        console.error("Error:", error.message);
-        throw new Error(`Failed to encrypt data: ${error.message}`);
-      } else {
-        throw new Error("Failed to encrypt data");
-      }
-    }
+    return this.makeAuthenticatedRequest<EncryptResponse>(
+      params,
+      "Failed to encrypt data"
+    );
   }
 
   public async decrypt(params: DecryptParams): Promise<DecryptResponse> {
-    await this.fetchAccessToken();
-
-    console.log("Decrypt Params:", params);
-
-    try {
-      const response = await axios.post(BASE_API_URL, params, {
-        headers: {
-          Authorization: `Bearer ${this.currentAccessToken}`,
-          api_key: this.config.api_key,
-          access_key: this.config.access_key,
-          secret_key: this.config.secret_key,
-          "Content-Type": "application/json",
-        },
-      });
-      console.log("Decrypted Data Response:", response.data);
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Error Response:", error.response?.data || error.message);
-        throw new Error(`Failed to decrypt data: ${error.message}`);
-      } else if (error instanceof Error) {
-        console.error("Error:", error.message);
-        throw new Error(`Failed to decrypt data: ${error.message}`);
-      } else {
-        throw new Error("Failed to decrypt data");
-      }
-    }
+    return this.makeAuthenticatedRequest<DecryptResponse>(
+      params,
+      "Failed to decrypt data"
+    );
   }
 
-  // Implement other methods: signEncrypt(), sign(), verifyDecrypt(), verify(), decrypt()
+  public async sign(params: SignParams): Promise<SignResponse> {
+    return this.makeAuthenticatedRequest<SignResponse>(
+      params,
+      "Failed to sign data"
+    );
+  }
+
+  public async verify(params: VerifyParams): Promise<VerifyResponse> {
+    return this.makeAuthenticatedRequest<VerifyResponse>(
+      params,
+      "Failed to verify data"
+    );
+  }
+
+  // Implement other methods: signEncrypt(), verifyDecrypt(), verify()
 }
 
 export { Crittora, Config, EncryptParams, EncryptResponse };
