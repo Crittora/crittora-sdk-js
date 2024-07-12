@@ -1,13 +1,24 @@
+// Base interfaces for common properties
+export interface BaseParams {
+  data: string;
+  requested_actions: string[];
+  permissions: Permission[];
+}
+
+export interface BaseResponse {
+  encryptedData?: string;
+  decrypted_data?: string;
+  transactionId?: string;
+  signature?: string;
+}
+
 export interface Permission {
   partner_id: string;
   permissions: string[];
 }
 
-export interface EncryptParams {
-  data: string;
-  requested_actions: string[];
-  permissions: Permission[];
-}
+// Extended interfaces using the base interfaces
+export interface EncryptParams extends BaseParams {}
 
 export interface DecryptParams {
   encryptedData: string;
@@ -15,14 +26,33 @@ export interface DecryptParams {
   requested_actions: string[];
 }
 
-export interface EncryptResponse {
+export interface SignParams {
+  signedData: string;
+  transactionId: string;
+  requested_actions: string[];
+  signature: string;
+}
+
+export interface VerifyParams extends BaseParams {}
+
+export interface EncryptResponse extends BaseResponse {
   encryptedData: string;
 }
 
-export interface DecryptResponse {
+export interface DecryptResponse extends BaseResponse {
   decrypted_data: string;
 }
 
+export interface SignResponse extends BaseResponse {
+  transactionId: string;
+  signature: string;
+}
+
+export interface VerifyResponse {
+  is_valid_signature: boolean;
+}
+
+// Configuration interface
 export interface Config {
   credentialsUsername: string;
   credentialsPassword: string;

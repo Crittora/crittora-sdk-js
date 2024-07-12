@@ -26,7 +26,6 @@ class Crittora {
     }
     fetchAccessToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             const { credentialsUsername, credentialsPassword, cognitoPoolClientId, clientId, clientSecret, fetchTokenOnEveryRequest, } = this.config;
             if (fetchTokenOnEveryRequest) {
                 this.currentAccessToken = null;
@@ -67,25 +66,14 @@ class Crittora {
                 }
             }
             catch (error) {
-                if (axios.isAxiosError(error)) {
-                    console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
-                    throw new Error(`Failed to fetch access token: ${error.message}`);
-                }
-                else if (error instanceof Error) {
-                    console.error("Error:", error.message);
-                    throw new Error(`Failed to fetch access token: ${error.message}`);
-                }
-                else {
-                    throw new Error("Failed to fetch access token");
-                }
+                this.handleError(error, "Failed to fetch access token");
             }
         });
     }
-    encrypt(params) {
+    makeAuthenticatedRequest(params, errorMessage) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             yield this.fetchAccessToken();
-            console.log("Encrypt Params:", params);
+            console.log("Request Params:", params);
             try {
                 const response = yield axios.post(BASE_API_URL, params, {
                     headers: {
@@ -96,55 +84,46 @@ class Crittora {
                         "Content-Type": "application/json",
                     },
                 });
-                console.log("Encrypted Data Response:", response.data);
+                console.log("Response Data:", response.data);
                 return response.data;
             }
             catch (error) {
-                if (axios.isAxiosError(error)) {
-                    console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
-                    throw new Error(`Failed to encrypt data: ${error.message}`);
-                }
-                else if (error instanceof Error) {
-                    console.error("Error:", error.message);
-                    throw new Error(`Failed to encrypt data: ${error.message}`);
-                }
-                else {
-                    throw new Error("Failed to encrypt data");
-                }
+                this.handleError(error, errorMessage);
             }
+        });
+    }
+    handleError(error, defaultMessage) {
+        var _a;
+        if (axios.isAxiosError(error)) {
+            console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
+            throw new Error(`${defaultMessage}: ${error.message}`);
+        }
+        else if (error instanceof Error) {
+            console.error("Error:", error.message);
+            throw new Error(`${defaultMessage}: ${error.message}`);
+        }
+        else {
+            throw new Error(defaultMessage);
+        }
+    }
+    encrypt(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.makeAuthenticatedRequest(params, "Failed to encrypt data");
         });
     }
     decrypt(params) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
-            yield this.fetchAccessToken();
-            console.log("Decrypt Params:", params);
-            try {
-                const response = yield axios.post(BASE_API_URL, params, {
-                    headers: {
-                        Authorization: `Bearer ${this.currentAccessToken}`,
-                        api_key: this.config.api_key,
-                        access_key: this.config.access_key,
-                        secret_key: this.config.secret_key,
-                        "Content-Type": "application/json",
-                    },
-                });
-                console.log("Decrypted Data Response:", response.data);
-                return response.data;
-            }
-            catch (error) {
-                if (axios.isAxiosError(error)) {
-                    console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
-                    throw new Error(`Failed to decrypt data: ${error.message}`);
-                }
-                else if (error instanceof Error) {
-                    console.error("Error:", error.message);
-                    throw new Error(`Failed to decrypt data: ${error.message}`);
-                }
-                else {
-                    throw new Error("Failed to decrypt data");
-                }
-            }
+            return this.makeAuthenticatedRequest(params, "Failed to decrypt data");
+        });
+    }
+    sign(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.makeAuthenticatedRequest(params, "Failed to sign data");
+        });
+    }
+    verify(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.makeAuthenticatedRequest(params, "Failed to verify data");
         });
     }
 }
