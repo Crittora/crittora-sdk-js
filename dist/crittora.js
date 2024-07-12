@@ -126,5 +126,10 @@ class Crittora {
             return this.makeAuthenticatedRequest(params, "Failed to verify data");
         });
     }
+    signEncrypt(params) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.makeAuthenticatedRequest(params, "Failed to verify data");
+        });
+    }
 }
 export { Crittora };
