@@ -102,4 +102,25 @@ describe("Crittora SDK", () => {
     expect(response.signature).toHaveProperty("transactionid");
     expect(response.signature).toHaveProperty("signature");
   });
+  test("should verify and decrypt data", async () => {
+    const params = {
+      encryption: {
+        transactionId: "fdfb353c-086d-48d6-bde7-ce308ffedbf3",
+        encryptedData: "Z5CGrDnrmf8vRjXrr5WfZuWGAC8NJ5hbwr2aE30DX30=",
+      },
+      signing: {
+        transactionId: "07192add-3109-4603-aff2-d68817c77f89",
+        signature:
+          "c1884a1e939b553582c97f5af38a379e136dadb8a333256896486cf44a77b20a7e21c8aec59d5f8f93b331c198da26c8fba9616991591b8141f0ad8dccf7450d",
+      },
+      requested_actions: ["v", "d"],
+    };
+
+    const response = await handleAction(
+      crittora.verifyDecrypt.bind(crittora),
+      params
+    );
+    expect(response).toHaveProperty("decrypted_data");
+    expect(response).toHaveProperty("is_valid_signature");
+  });
 });
