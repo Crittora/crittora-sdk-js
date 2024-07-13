@@ -40,6 +40,8 @@ export interface EncryptResponse extends BaseResponse {
   encryptedData: string;
 }
 
+export interface VerifyDecryptParams extends BaseParams {}
+
 export interface DecryptResponse extends BaseResponse {
   decrypted_data: string;
 }
@@ -62,6 +64,9 @@ export interface SignEncryptResponse {
     transactionId: string;
     signature: string;
   };
+}
+export interface VerifyDecryptResponse {
+  is_valid_signature: boolean;
 }
 
 // Configuration interface
