@@ -117,7 +117,7 @@ describe("Crittora SDK", () => {
     };
 
     const response = await handleAction(
-      crittora.verifyDecrypt.bind(crittora),
+      crittora.decryptVerify.bind(crittora),
       params
     );
     expect(response).toHaveProperty("decrypted_data");

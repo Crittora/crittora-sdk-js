@@ -30,22 +30,46 @@ npm install @wutif/crittora
 
 ## Configuration
 
-Before using the SDK, you need to configure it with your credentials:
+Before using the SDK, you need to configure it with your credentials. It is recommended to use environment variables for the configuration:
+
+1. Create a `.env` file in the root of your project:
+
+```dotenv
+CREDENTIALS_USERNAME=testuser5
+CREDENTIALS_PASSWORD=jn]{`:s6&T6-qqHd
+COGNITO_POOL_CLIENT_ID=a46804b8-20a1-708d-f5d0-13fe0ae1bfa7
+CLIENT_ID=5g9pp889dcru8php2p5ihvoosr
+CLIENT_SECRET=1ln5m524mjvi7ah9v0060498nhlhkdf06k5avthuu7dgqht7biqf
+API_KEY=ma,{fKV!mLTVBEY)U#Bi(@Y-r;RJ.684*SF:dB!.H}R.c|>{[!y't]6bm{K=Cl}c
+SECRET_KEY=*q4@?D</qmrhfF9I_[_Rt_?(wV2CE:n'!beg<{#|A;2%:ETDgk}.ZseGPrz.td`A
+ACCESS_KEY=6QNm1zR5.V:(X=Z~W(2SBO|7,Gw@jz4!
+FETCH_TOKEN_ON_EVERY_REQUEST=true
+```
+
+2. Install `dotenv` package to load environment variables:
+
+```bash
+npm install dotenv
+```
+
+3. Load the environment variables in your application:
 
 ```typescript
+import dotenv from "dotenv";
 import { Crittora } from "@wutif/crittora";
 
+dotenv.config();
+
 const config = {
-  credentialsUsername: "testuser5",
-  credentialsPassword: "jn]{`:s6&T6-qqHd",
-  cognitoPoolClientId: "a46804b8-20a1-708d-f5d0-13fe0ae1bfa7",
-  clientId: "5g9pp889dcru8php2p5ihvoosr",
-  clientSecret: "1ln5m524mjvi7ah9v0060498nhlhkdf06k5avthuu7dgqht7biqf",
-  api_key: "ma,{fKV!mLTVBEY)U#Bi(@Y-r;RJ.684*SF:dB!.H}R.c|>{[!y't]6bm{K=Cl}c",
-  secret_key:
-    "*q4@?D</qmrhfF9I_[_Rt_?(wV2CE:n'!beg<{#|A;2%:ETDgk}.ZseGPrz.td`A",
-  access_key: "6QNm1zR5.V:(X=Z~W(2SBO|7,Gw@jz4!",
-  fetchTokenOnEveryRequest: true,
+  credentialsUsername: process.env.CREDENTIALS_USERNAME || "",
+  credentialsPassword: process.env.CREDENTIALS_PASSWORD || "",
+  cognitoPoolClientId: process.env.COGNITO_POOL_CLIENT_ID || "",
+  clientId: process.env.CLIENT_ID || "",
+  clientSecret: process.env.CLIENT_SECRET || "",
+  api_key: process.env.API_KEY || "",
+  secret_key: process.env.SECRET_KEY || "",
+  access_key: process.env.ACCESS_KEY || "",
+  fetchTokenOnEveryRequest: process.env.FETCH_TOKEN_ON_EVERY_REQUEST === "true",
 };
 
 const crittora = new Crittora(config);
@@ -308,11 +332,3 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-```
-
-```
-
-```
-
-```
