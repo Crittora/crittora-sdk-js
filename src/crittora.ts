@@ -17,8 +17,17 @@ import {
   VerifyDecryptResponse,
 } from "./types";
 
+// const BASE_API_URL =
+//   "https://qh8enufhje.execute-api.us-east-1.amazonaws.com/sbx/event";
 const BASE_API_URL =
-  "https://qh8enufhje.execute-api.us-east-1.amazonaws.com/sbx/event";
+  "https://2h6f1172ud.execute-api.us-east-1.amazonaws.com/stage";
+
+const POST_ENCRYPT_URL = `${BASE_API_URL}/encrypt`;
+const POST_DECRYPT_URL = `${BASE_API_URL}/decrypt`;
+const POST_SIGN_URL = `${BASE_API_URL}/sign`;
+const POST_VERIFY_URL = `${BASE_API_URL}/verify`;
+const POST_SIGN_ENCRYPT_URL = `${BASE_API_URL}/sign-encrypt`;
+const POST_VERIFY_DECRYPT_URL = `${BASE_API_URL}/verify-decrypt`;
 
 const COGNITO_API_URL = "https://cognito-idp.us-east-1.amazonaws.com/";
 
@@ -106,6 +115,7 @@ class Crittora {
   }
 
   private async makeAuthenticatedRequest<T>(
+    url: string,
     params: any,
     errorMessage: string
   ): Promise<T> {
@@ -114,7 +124,7 @@ class Crittora {
     console.log("Request Params:", params);
 
     try {
-      const response = await axios.post(BASE_API_URL, params, {
+      const response = await axios.post(url, params, {
         headers: {
           Authorization: `Bearer ${this.currentAccessToken}`,
           api_key: this.config.api_key,
@@ -144,6 +154,7 @@ class Crittora {
 
   public async encrypt(params: EncryptParams): Promise<EncryptResponse> {
     return this.makeAuthenticatedRequest<EncryptResponse>(
+      POST_ENCRYPT_URL,
       params,
       "Failed to encrypt data"
     );
@@ -151,6 +162,7 @@ class Crittora {
 
   public async decrypt(params: DecryptParams): Promise<DecryptResponse> {
     return this.makeAuthenticatedRequest<DecryptResponse>(
+      POST_DECRYPT_URL,
       params,
       "Failed to decrypt data"
     );
@@ -158,6 +170,7 @@ class Crittora {
 
   public async sign(params: SignParams): Promise<SignResponse> {
     return this.makeAuthenticatedRequest<SignResponse>(
+      POST_SIGN_URL,
       params,
       "Failed to sign data"
     );
@@ -165,6 +178,7 @@ class Crittora {
 
   public async verify(params: VerifyParams): Promise<VerifyResponse> {
     return this.makeAuthenticatedRequest<VerifyResponse>(
+      POST_VERIFY_URL,
       params,
       "Failed to verify data"
     );
@@ -174,6 +188,7 @@ class Crittora {
     params: SignEncryptParams
   ): Promise<SignEncryptResponse> {
     return this.makeAuthenticatedRequest<SignEncryptResponse>(
+      POST_SIGN_ENCRYPT_URL,
       params,
       "Failed to verify data"
     );
@@ -183,6 +198,7 @@ class Crittora {
     params: VerifyDecryptParams
   ): Promise<VerifyDecryptResponse> {
     return this.makeAuthenticatedRequest<VerifyDecryptResponse>(
+      POST_VERIFY_DECRYPT_URL,
       params,
       "Failed to verify / decrypt data"
     );
