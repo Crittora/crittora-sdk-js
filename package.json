@@ -1,14 +1,21 @@
 {
-  "name": "crittora-sdk-node",
+  "name": "@wutif/crittora",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Crittora - Encryption and Signing SDK by Wutif",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
     "build": "tsc"
   },
-  "keywords": [],
-  "author": "Erik Rowan <erik@crittora.com>, Gerardo I. Ornelas <gerardo@crittora.com>",
+  "keywords": [
+    "encryption",
+    "signing",
+    "sdk",
+    "cryptography",
+    "wutif"
+  ],
+  "author": "Erik Rowan <erik@wutif.tech>, Gerardo I. Ornelas <gerardo@wutif.tech>",
   "license": "MIT",
   "type": "module",
   "dependencies": {
@@ -24,5 +31,12 @@
     "@types/jest": "^29.5.12",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wutif/crittora.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wutif/crittora/issues"
   }
 }

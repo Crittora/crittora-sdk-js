@@ -25,7 +25,7 @@ Crittora SDK provides secure methods for encrypting, decrypting, signing, verify
 To install the Crittora SDK, run:
 
 ```bash
-npm install crittora-sdk
+npm install @wutif/crittora
 ```
 
 ## Configuration
@@ -33,7 +33,7 @@ npm install crittora-sdk
 Before using the SDK, you need to configure it with your credentials:
 
 ```typescript
-import { Crittora } from "crittora-sdk";
+import { Crittora } from "@wutif/crittora";
 
 const config = {
   credentialsUsername: "testuser5",
@@ -308,3 +308,11 @@ Contributions are welcome! Please open an issue or submit a pull request for any
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+```
+
+```
+
+```
+
+```
