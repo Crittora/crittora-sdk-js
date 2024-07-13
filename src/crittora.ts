@@ -16,20 +16,15 @@ import {
   VerifyDecryptParams,
   VerifyDecryptResponse,
 } from "./types";
-
-// const BASE_API_URL =
-//   "https://qh8enufhje.execute-api.us-east-1.amazonaws.com/sbx/event";
-const BASE_API_URL =
-  "https://2h6f1172ud.execute-api.us-east-1.amazonaws.com/stage";
-
-const POST_ENCRYPT_URL = `${BASE_API_URL}/encrypt`;
-const POST_DECRYPT_URL = `${BASE_API_URL}/decrypt`;
-const POST_SIGN_URL = `${BASE_API_URL}/sign`;
-const POST_VERIFY_URL = `${BASE_API_URL}/verify`;
-const POST_SIGN_ENCRYPT_URL = `${BASE_API_URL}/sign-encrypt`;
-const POST_VERIFY_DECRYPT_URL = `${BASE_API_URL}/verify-decrypt`;
-
-const COGNITO_API_URL = "https://cognito-idp.us-east-1.amazonaws.com/";
+import {
+  COGNITO_API_URL,
+  POST_ENCRYPT_URL,
+  POST_DECRYPT_URL,
+  POST_SIGN_URL,
+  POST_VERIFY_URL,
+  POST_SIGN_ENCRYPT_URL,
+  POST_VERIFY_DECRYPT_URL,
+} from "./constants";
 
 class Crittora {
   private config: Config;
@@ -190,7 +185,7 @@ class Crittora {
     return this.makeAuthenticatedRequest<SignEncryptResponse>(
       POST_SIGN_ENCRYPT_URL,
       params,
-      "Failed to verify data"
+      "Failed to sign / encrypt data"
     );
   }
 
