@@ -40,7 +40,7 @@ export interface EncryptResponse extends BaseResponse {
   encryptedData: string;
 }
 
-export interface VerifyDecryptParams extends BaseParams {}
+export interface DecryptVerifyParams extends BaseParams {}
 
 export interface DecryptResponse extends BaseResponse {
   decrypted_data: string;
@@ -65,7 +65,7 @@ export interface SignEncryptResponse {
     signature: string;
   };
 }
-export interface VerifyDecryptResponse {
+export interface DecryptVerifyResponse {
   is_valid_signature: boolean;
 }
 

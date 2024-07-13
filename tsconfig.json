@@ -11,7 +11,9 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["jest", "node"],
     "resolveJsonModule": true,
-    "moduleDetection": "force"
+    "moduleDetection": "force",
+    "declaration": true,
+    "declarationDir": "./dist"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "test", "**/*.test.ts", "dist"]

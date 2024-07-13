@@ -13,8 +13,8 @@ import {
   VerifyResponse,
   SignEncryptParams,
   SignEncryptResponse,
-  VerifyDecryptParams,
-  VerifyDecryptResponse,
+  DecryptVerifyParams,
+  DecryptVerifyResponse,
 } from "./types";
 import {
   COGNITO_API_URL,
@@ -23,7 +23,7 @@ import {
   POST_SIGN_URL,
   POST_VERIFY_URL,
   POST_SIGN_ENCRYPT_URL,
-  POST_VERIFY_DECRYPT_URL,
+  POST_DECRYPT_VERIFY_URL,
 } from "./constants";
 
 class Crittora {
@@ -189,11 +189,11 @@ class Crittora {
     );
   }
 
-  public async verifyDecrypt(
-    params: VerifyDecryptParams
-  ): Promise<VerifyDecryptResponse> {
-    return this.makeAuthenticatedRequest<VerifyDecryptResponse>(
-      POST_VERIFY_DECRYPT_URL,
+  public async decryptVerify(
+    params: DecryptVerifyParams
+  ): Promise<DecryptVerifyResponse> {
+    return this.makeAuthenticatedRequest<DecryptVerifyResponse>(
+      POST_DECRYPT_VERIFY_URL,
       params,
       "Failed to verify / decrypt data"
     );
