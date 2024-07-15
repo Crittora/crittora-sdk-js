@@ -48,8 +48,8 @@ describe("Crittora SDK", () => {
 
   test("should decrypt data", async () => {
     const params = {
-      transactionId: "eb724aa1-2868-4a4f-936e-559036c661d0",
-      encryptedData: "bc6G47v1lWZriVnT6T1duUBxiipW-4HtoOoAMjFbC6o=",
+      transactionId: "4003bacc-6107-4dd6-b7be-116fe8b590d2",
+      encryptedData: "44hb88caQ3EE7p3pOp3bIHgUGhlQkW70SFUekDiTpcY=",
       requested_actions: ["d"],
     };
 
@@ -86,7 +86,7 @@ describe("Crittora SDK", () => {
 
   test("should sign and encrypt data", async () => {
     const params = {
-      data: "fake data",
+      data: "fake data for sign and encrypt",
       requested_actions: ["e", "s"],
       permissions: [{ partner_id: "12345", permissions: ["d"] }],
     };
@@ -102,16 +102,17 @@ describe("Crittora SDK", () => {
     expect(response.signature).toHaveProperty("transactionid");
     expect(response.signature).toHaveProperty("signature");
   });
-  test("should verify and decrypt data", async () => {
+  test("should decrypt and verify data", async () => {
     const params = {
       encryption: {
-        transactionId: "fdfb353c-086d-48d6-bde7-ce308ffedbf3",
-        encryptedData: "Z5CGrDnrmf8vRjXrr5WfZuWGAC8NJ5hbwr2aE30DX30=",
+        transactionId: "ad052f2c-f7f6-466f-a07d-1ac9dc04ac22",
+        encryptedData:
+          "kmdHx5MEt5Dv3OJsORASCPFalDTMr806Yn4HbuqcsQDVLNWG7ZpByMWwwh-_bATb",
       },
       signing: {
-        transactionId: "07192add-3109-4603-aff2-d68817c77f89",
+        transactionId: "a0c546b7-019f-44e5-bab9-f8430d073488",
         signature:
-          "c1884a1e939b553582c97f5af38a379e136dadb8a333256896486cf44a77b20a7e21c8aec59d5f8f93b331c198da26c8fba9616991591b8141f0ad8dccf7450d",
+          "52c06ffaa83e562feb5d802a512955e67628800585d82fc7029ba454ff2eef4ff8d52fe3f5e7988363141a9d4295389aa723b2eba9ddde742da0ca056a333204",
       },
       requested_actions: ["v", "d"],
     };
