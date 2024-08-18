@@ -1,85 +1,34 @@
-// Base interfaces for common properties
-export interface BaseParams {
+// types.ts
+
+export interface AuthTokens {
+  IdToken: string;
+  AccessToken: string;
+  RefreshToken: string;
+  ExpiresIn: number;
+}
+
+export interface SignEncryptPayload {
   data: string;
   requested_actions: string[];
-  permissions: Permission[];
+  permissions?: string[];
 }
 
-export interface BaseResponse {
-  encryptedData?: string;
-  decrypted_data?: string;
-  transactionId?: string;
+export interface DecryptVerifyPayload {
+  encrypted_data: string;
+  permissions?: string[];
 }
 
-export interface Permission {
-  partner_id: string;
-  permissions: string[];
-}
-
-// Extended interfaces using the base interfaces
-export interface EncryptParams extends BaseParams {}
-
-export interface DecryptParams {
-  encryptedData: string;
-  transactionId: string;
+export interface EncryptPayload {
+  data: string;
   requested_actions: string[];
+  permissions?: string[];
 }
 
-export interface SignParams {
-  signedData: string;
-  transactionId: string;
-  requested_actions: string[];
-  signature: string;
+export interface DecryptPayload {
+  encrypted_data: string;
+  permissions?: string[];
 }
 
-export interface VerifyParams extends BaseParams {}
-
-export interface SignEncryptParams extends BaseParams {}
-
-export interface EncryptResponse extends BaseResponse {
-  encryptedData: string;
-}
-
-export interface DecryptVerifyParams extends BaseParams {}
-
-export interface DecryptResponse extends BaseResponse {
-  decrypted_data: string;
-}
-
-export interface SignResponse extends BaseResponse {
-  transactionId: string;
-  signature: string;
-}
-
-export interface VerifyResponse {
-  is_valid_signature: boolean;
-}
-
-export interface SignEncryptResponse {
-  encryption: {
-    transactionId: string;
-    encrypted_data: string;
-  };
-  signature: {
-    transactionId: string;
-    signature: string;
-  };
-}
-export interface DecryptVerifyResponse {
-  is_valid_signature: boolean;
-}
-
-// Configuration interface
-export interface Config {
-  credentialsUsername: string;
-  credentialsPassword: string;
-  cognitoPoolClientId: string;
-  clientId: string;
-  clientSecret: string;
-  api_key: string;
-  secret_key: string;
-  access_key: string;
-  fetchTokenOnEveryRequest: boolean;
-  currentAccessToken?: string;
-  accessTokenExpiry?: number;
+export interface Headers {
+  [key: string]: string;
 }
