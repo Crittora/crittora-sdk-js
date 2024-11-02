@@ -1,10 +1,10 @@
 {
   "name": "@wutif/crittora",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "description": "Crittora - Encryption and Signing SDK by Wutif",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "LICENSE",
@@ -12,10 +12,17 @@
   ],
   "scripts": {
     "test": "jest",
+    "clean": "rimraf dist",
     "build": "tsc",
     "prepare": "npm run build",
     "prepublishOnly": "npm test",
-    "clean": "rimraf dist"
+    "prepack": "npm run build",
+    "lint": "eslint . --ext .ts",
+    "verify": "npm run clean && npm run build && npm run test",
+    "release": "npm run verify && npm version patch && npm publish && git push origin main && git push origin --tags",
+    "release:patch": "npm run verify && npm version patch && npm publish && git push origin main && git push origin --tags",
+    "release:minor": "npm run verify && npm version minor && npm publish && git push origin main && git push origin --tags",
+    "release:major": "npm run verify && npm version major && npm publish && git push origin main && git push origin --tags"
   },
   "keywords": [
     "encryption",
@@ -27,6 +34,12 @@
   "author": "Erik Rowan <erik@crittora.com>, Gerardo I. Ornelas <gerardo@crittora.com>",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "dependencies": {
     "amazon-cognito-identity-js": "^6.3.12",
     "dotenv": "^16.4.5"
