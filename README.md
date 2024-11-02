@@ -1,6 +1,6 @@
 # Crittora SDK
 
-Crittora SDK provides secure methods for encrypting, decrypting, signing, verifying, and combining these operations on data. It uses AWS Cognito for authentication and Axios for HTTP requests.
+Crittora SDK provides secure methods for encrypting, decrypting, signing, verifying, and combining these operations on data. It uses AWS Cognito for authentication and the Fetch API for HTTP requests.
 
 ## Table of Contents
 
@@ -8,13 +8,14 @@ Crittora SDK provides secure methods for encrypting, decrypting, signing, verify
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
   - [Configuration](#configuration)
+    - [Environment Variables](#environment-variables)
+    - [Environment Selection](#environment-selection)
   - [Usage](#usage)
-    - [Encrypt](#encrypt)
-    - [Decrypt](#decrypt)
-    - [Sign](#sign)
-    - [Verify](#verify)
-    - [SignEncrypt](#signencrypt)
-    - [VerifyDecrypt](#verifydecrypt)
+    - [Authentication](#authentication)
+    - [Encryption](#encryption)
+    - [Decryption](#decryption)
+    - [Decrypt-Verify](#decrypt-verify)
+  - [Error Handling](#error-handling)
   - [Types](#types)
   - [Running Tests](#running-tests)
   - [Contributing](#contributing)
@@ -30,298 +31,202 @@ npm install @wutif/crittora
 
 ## Configuration
 
-Before using the SDK, you need to configure it with your credentials. It is recommended to use environment variables for the configuration:
+### Environment Variables
 
-1. Create a `.env` file in the root of your project:
+Create a `.env` file in the root of your project:
 
 ```dotenv
-CREDENTIALS_USERNAME=testuser5
-CREDENTIALS_PASSWORD=jn]{`:s6&T6-qqHd
-COGNITO_POOL_CLIENT_ID=a46804b8-20a1-708d-f5d0-13fe0ae1bfa7
-CLIENT_ID=5g9pp889dcru8php2p5ihvoosr
-CLIENT_SECRET=1ln5m524mjvi7ah9v0060498nhlhkdf06k5avthuu7dgqht7biqf
-API_KEY=ma,{fKV!mLTVBEY)U#Bi(@Y-r;RJ.684*SF:dB!.H}R.c|>{[!y't]6bm{K=Cl}c
-SECRET_KEY=*q4@?D</qmrhfF9I_[_Rt_?(wV2CE:n'!beg<{#|A;2%:ETDgk}.ZseGPrz.td`A
-ACCESS_KEY=6QNm1zR5.V:(X=Z~W(2SBO|7,Gw@jz4!
-FETCH_TOKEN_ON_EVERY_REQUEST=true
+# Optional: Defaults to development if not set
+NODE_ENV=development
+
+# Required API keys
+API_KEY=your_api_key
+ACCESS_KEY=your_access_key
+SECRET_KEY=your_secret_key
 ```
 
-2. Install `dotenv` package to load environment variables:
+### Environment Selection
 
-```bash
-npm install dotenv
-```
+The SDK supports two environments:
 
-3. Load the environment variables in your application:
+**Development** (default):
 
-```typescript
-import dotenv from "dotenv";
-import { Crittora } from "@wutif/crittora";
+- Base URL: https://dev-api.crittoraapi.com
+- Cognito Pool: us-east-1_Zl27AI2Vr
 
-dotenv.config();
+**Production**:
 
-const config = {
-  credentialsUsername: process.env.CREDENTIALS_USERNAME || "",
-  credentialsPassword: process.env.CREDENTIALS_PASSWORD || "",
-  cognitoPoolClientId: process.env.COGNITO_POOL_CLIENT_ID || "",
-  clientId: process.env.CLIENT_ID || "",
-  clientSecret: process.env.CLIENT_SECRET || "",
-  api_key: process.env.API_KEY || "",
-  secret_key: process.env.SECRET_KEY || "",
-  access_key: process.env.ACCESS_KEY || "",
-  fetchTokenOnEveryRequest: process.env.FETCH_TOKEN_ON_EVERY_REQUEST === "true",
-};
+- Base URL: https://api.crittoraapis.com
+- Cognito Pool: us-east-1_Tmljk4Uiw
 
-const crittora = new Crittora(config);
-```
+To select an environment, set the `NODE_ENV` environment variable to either `development` or `production`.
 
 ## Usage
 
-### Encrypt
+### Authentication
 
 ```typescript
-const params = {
-  data: "fake data",
-  requested_actions: ["e"],
-  permissions: [{ partner_id: "12345", permissions: ["d"] }],
-};
+import { Crittora } from "@wutif/crittora";
+
+const crittora = new Crittora();
+
+const username = "your_username";
+const password = "your_password";
 
 crittora
-  .encrypt(params)
+  .authenticate(username, password)
   .then((response) => {
-    console.log("Encrypted data:", response.encrypted_data);
+    console.log("Authentication successful");
+    // Store these tokens securely
+    const { IdToken, AccessToken, RefreshToken } = response;
   })
   .catch((error) => {
-    console.error("Error:", error.message);
+    console.error("Authentication failed:", error);
   });
 ```
 
-### Decrypt
+### Encryption
 
 ```typescript
-const params = {
-  transactionId: "eb724aa1-2868-4a4f-936e-559036c661d0",
-  encryptedData: "bc6G47v1lWZriVnT6T1duUBxiipW-4HtoOoAMjFbC6o=",
-  requested_actions: ["d"],
-};
+const idToken = "your_id_token"; // from authentication
+const data = "sensitive data";
+const permissions = ["permission1", "permission2"]; // optional
 
 crittora
-  .decrypt(params)
+  .encrypt(idToken, data, permissions)
+  .then((encryptedData) => {
+    console.log("Encrypted data:", encryptedData);
+  })
+  .catch((error) => {
+    console.error("Encryption failed:", error);
+  });
+```
+
+### Decryption
+
+```typescript
+const idToken = "your_id_token"; // from authentication
+const encryptedData = "encrypted_string";
+const permissions = ["permission1", "permission2"]; // optional
+
+crittora
+  .decrypt(idToken, encryptedData, permissions)
+  .then((decryptedData) => {
+    console.log("Decrypted data:", decryptedData);
+  })
+  .catch((error) => {
+    console.error("Decryption failed:", error);
+  });
+```
+
+### Decrypt-Verify
+
+```typescript
+const idToken = "your_id_token"; // from authentication
+const encryptedData = "encrypted_string";
+const permissions = ["permission1", "permission2"]; // optional
+
+crittora
+  .decryptVerify(idToken, encryptedData, permissions)
   .then((response) => {
     console.log("Decrypted data:", response.decrypted_data);
+    console.log("Signature valid:", response.is_valid_signature);
   })
   .catch((error) => {
-    console.error("Error:", error.message);
+    console.error("Decrypt-verify failed:", error);
   });
 ```
 
-### Sign
+## Error Handling
+
+The SDK provides specific error types for different scenarios:
 
 ```typescript
-const params = {
-  data: "fake data",
-  requested_actions: ["s"],
-  permissions: [{ partner_id: "12345", permissions: ["d"] }],
-};
+// Base error type
+CrittoraError: General SDK errors with code and status
 
-crittora
-  .sign(params)
-  .then((response) => {
-    console.log("Signature:", response.signature);
-  })
-  .catch((error) => {
-    console.error("Error:", error.message);
-  });
+// Specific error types
+AuthenticationError: Authentication-related failures
+EncryptionError: Encryption operation failures
+DecryptionError: Decryption operation failures
 ```
 
-### Verify
+Example error handling:
 
 ```typescript
-const params = {
-  signedData: "fake data",
-  transactionId: "d6838cb6-89c4-459b-9919-68ab40f285c9",
-  signature:
-    "8e082a42335c71b64fe228de8842512c1881f7fabbb561b77de0ca97e5c273926099554d686806d9da42c48ae8ad631f914681f25c8595f1bb1264f5c7a18508",
-  requested_actions: ["v"],
-};
-
-crittora
-  .verify(params)
-  .then((response) => {
-    console.log("Is valid signature:", response.is_valid_signature);
-  })
-  .catch((error) => {
-    console.error("Error:", error.message);
-  });
-```
-
-### SignEncrypt
-
-```typescript
-const params = {
-  data: "fake data",
-  requested_actions: ["e", "s"],
-  permissions: [{ partner_id: "12345", permissions: ["d"] }],
-};
-
-crittora
-  .signEncrypt(params)
-  .then((response) => {
-    console.log("Encryption:", response.encryption);
-    console.log("Signature:", response.signature);
-  })
-  .catch((error) => {
-    console.error("Error:", error.message);
-  });
-```
-
-### VerifyDecrypt
-
-```typescript
-const params = {
-  encryption: {
-    transactionId: "fdfb353c-086d-48d6-bde7-ce308ffedbf3",
-    encryptedData: "Z5CGrDnrmf8vRjXrr5WfZuWGAC8NJ5hbwr2aE30DX30=",
-  },
-  signing: {
-    transactionId: "07192add-3109-4603-aff2-d68817c77f89",
-    signature:
-      "c1884a1e939b553582c97f5af38a379e136dadb8a333256896486cf44a77b20a7e21c8aec59d5f8f93b331c198da26c8fba9616991591b8141f0ad8dccf7450d",
-  },
-  requested_actions: ["v", "d"],
-};
-
-crittora
-  .verifyDecrypt(params)
-  .then((response) => {
-    console.log("Decrypted data:", response.decrypted_data);
-    console.log("Is valid signature:", response.is_valid_signature);
-  })
-  .catch((error) => {
-    console.error("Error:", error.message);
-  });
+try {
+  await crittora.encrypt(idToken, data);
+} catch (error) {
+  if (error instanceof AuthenticationError) {
+    // Handle authentication issues
+  } else if (error instanceof EncryptionError) {
+    // Handle encryption failures
+  } else {
+    // Handle other errors
+  }
+}
 ```
 
 ## Types
 
-Here are the types used in the SDK:
+The SDK exports the following TypeScript interfaces:
 
 ```typescript
-export interface Permission {
+// Authentication
+interface AuthResponse {
+  IdToken: string;
+  AccessToken: string;
+  RefreshToken: string;
+}
+
+// Configuration
+interface CrittoraConfig {
+  cognito_endpoint?: string;
+  base_url?: string;
+  user_pool_id?: string;
+  client_id?: string;
+}
+
+// Operations
+interface EncryptResponse {
+  encrypted_data: string;
+}
+
+interface DecryptResponse {
+  decrypted_data: string;
+}
+
+interface DecryptVerifyResponse {
+  decrypted_data: string;
+  is_valid_signature: boolean;
+}
+
+// Permissions
+interface Permission {
   partner_id: string;
   permissions: string[];
 }
 
-export interface BaseParams {
+// Parameters
+interface BaseParams {
   data: string;
   requested_actions: string[];
-  permissions: Permission[];
+  permissions?: Permission[];
 }
 
-export interface BaseResponse {
-  encryptedData?: string;
-  decrypted_data?: string;
+interface DecryptParams {
+  encrypted_data: string;
   transactionId?: string;
-}
-
-export interface EncryptParams extends BaseParams {}
-
-export interface DecryptParams {
-  encryptedData: string;
-  transactionId: string;
-  requested_actions: string[];
-}
-
-export interface SignParams {
-  signedData: string;
-  transactionId: string;
-  requested_actions: string[];
-  signature: string;
-}
-
-export interface VerifyParams extends BaseParams {}
-
-export interface SignEncryptParams extends BaseParams {}
-
-export interface EncryptResponse extends BaseResponse {
-  encryptedData: string;
-}
-
-export interface DecryptResponse extends BaseResponse {
-  decrypted_data: string;
-}
-
-export interface SignResponse extends BaseResponse {
-  transactionId: string;
-  signature: string;
-}
-
-export interface VerifyResponse {
-  is_valid_signature: boolean;
-}
-
-export interface SignEncryptResponse {
-  encryption: {
-    transactionId: string;
-    encrypted_data: string;
-  };
-  signature: {
-    transactionId: string;
-    signature: string;
-  };
-}
-
-export interface VerifyDecryptResponse {
-  is_valid_signature: boolean;
-}
-
-export interface Config {
-  credentialsUsername: string;
-  credentialsPassword: string;
-  cognitoPoolClientId: string;
-  clientId: string;
-  clientSecret: string;
-  api_key: string;
-  secret_key: string;
-  access_key: string;
-  fetchTokenOnEveryRequest: boolean;
-  currentAccessToken?: string;
-  accessTokenExpiry?: number;
+  requested_actions?: string[];
 }
 ```
 
 ## Running Tests
 
-To run tests, ensure you have Jest installed and set up in your project:
+To run tests:
 
 ```bash
 npm install --save-dev jest ts-jest @types/jest
-```
-
-Create a Jest configuration file (`jest.config.js`):
-
-```javascript
-/** @type {import('ts-jest').JestConfigWithTsJest} **/
-export default {
-  testEnvironment: "node",
-  transform: {
-    "^.+\\.tsx?$": "ts-jest",
-  },
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
-};
-```
-
-Add the following scripts to your `package.json`:
-
-```json
-"scripts": {
-  "test": "jest"
-}
-```
-
-Run tests with:
-
-```bash
 npm test
 ```
 
