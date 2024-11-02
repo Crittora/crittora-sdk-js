@@ -1,48 +1,36 @@
-export interface BaseParams {
-    data: string;
-    requested_actions: string[];
-    permissions: Permission[];
-}
-export interface BaseResponse {
-    encryptedData?: string;
-    decrypted_data?: string;
-    transactionId?: string;
+export interface AuthResponse {
+    IdToken: string;
+    AccessToken: string;
+    RefreshToken: string;
 }
 export interface Permission {
     partner_id: string;
     permissions: string[];
 }
+export interface BaseParams {
+    data: string;
+    requested_actions: string[];
+    permissions?: Permission[];
+}
+export interface BaseResponse {
+    encrypted_data?: string;
+    decrypted_data?: string;
+    transactionId?: string;
+}
 export interface EncryptParams extends BaseParams {
 }
-export interface DecryptParams {
-    encryptedData: string;
-    transactionId: string;
-    requested_actions: string[];
-}
-export interface SignParams {
-    signedData: string;
-    transactionId: string;
-    requested_actions: string[];
-    signature: string;
-}
-export interface VerifyParams extends BaseParams {
-}
-export interface SignEncryptParams extends BaseParams {
-}
 export interface EncryptResponse extends BaseResponse {
-    encryptedData: string;
+    encrypted_data: string;
 }
-export interface DecryptVerifyParams extends BaseParams {
+export interface DecryptParams {
+    encrypted_data: string;
+    transactionId?: string;
+    requested_actions?: string[];
 }
 export interface DecryptResponse extends BaseResponse {
     decrypted_data: string;
 }
-export interface SignResponse extends BaseResponse {
-    transactionId: string;
-    signature: string;
-}
-export interface VerifyResponse {
-    is_valid_signature: boolean;
+export interface SignEncryptParams extends BaseParams {
 }
 export interface SignEncryptResponse {
     encryption: {
@@ -54,19 +42,26 @@ export interface SignEncryptResponse {
         signature: string;
     };
 }
+export interface DecryptVerifyParams {
+    encrypted_data: string;
+    transactionId?: string;
+    requested_actions?: string[];
+    permissions?: string[];
+}
 export interface DecryptVerifyResponse {
+    decrypted_data: string;
     is_valid_signature: boolean;
 }
-export interface Config {
-    credentialsUsername: string;
-    credentialsPassword: string;
-    cognitoPoolClientId: string;
-    clientId: string;
-    clientSecret: string;
+export interface CrittoraConfig {
+    cognito_endpoint?: string;
+    base_url?: string;
+    user_pool_id?: string;
+    client_id?: string;
+}
+export interface Headers {
+    Authorization: string;
     api_key: string;
-    secret_key: string;
     access_key: string;
-    fetchTokenOnEveryRequest: boolean;
-    currentAccessToken?: string;
-    accessTokenExpiry?: number;
+    secret_key: string;
+    "Content-Type": string;
 }
