@@ -19,10 +19,10 @@
     "prepack": "npm run build",
     "lint": "eslint . --ext .ts",
     "verify": "npm run clean && npm run build && npm run test",
-    "release": "npm run verify && npm version patch && npm publish && git push origin main && git push origin --tags",
-    "release:patch": "npm run verify && npm version patch && npm publish && git push origin main && git push origin --tags",
-    "release:minor": "npm run verify && npm version minor && npm publish && git push origin main && git push origin --tags",
-    "release:major": "npm run verify && npm version major && npm publish && git push origin main && git push origin --tags"
+    "release": "npm run verify && npm version patch && npm publish",
+    "release:patch": "npm run verify && npm version patch && npm publish",
+    "release:minor": "npm run verify && npm version minor && npm publish",
+    "release:major": "npm run verify && npm version major && npm publish"
   },
   "keywords": [
     "encryption",
@@ -33,11 +33,11 @@
   ],
   "author": "Erik Rowan <erik@crittora.com>, Gerardo I. Ornelas <gerardo@crittora.com>",
   "license": "MIT",
-  "type": "module",
+  "type": "commonjs",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
+      "require": "./dist/index.js",
       "default": "./dist/index.js"
     }
   },

@@ -1,9 +1,12 @@
-import { AuthService } from "./services/authService";
-import { EncryptionService } from "./services/encryptionService";
-export class Crittora {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Crittora = void 0;
+const authService_1 = require("./services/authService");
+const encryptionService_1 = require("./services/encryptionService");
+class Crittora {
     constructor() {
-        this.authService = AuthService.getInstance();
-        this.encryptionService = EncryptionService.getInstance();
+        this.authService = authService_1.AuthService.getInstance();
+        this.encryptionService = encryptionService_1.EncryptionService.getInstance();
     }
     async authenticate(username, password) {
         return this.authService.authenticate(username, password);
@@ -18,4 +21,5 @@ export class Crittora {
         return this.encryptionService.decryptVerify(idToken, encryptedData, permissions);
     }
 }
+exports.Crittora = Crittora;
 //# sourceMappingURL=crittora.js.map
