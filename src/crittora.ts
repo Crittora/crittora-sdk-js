@@ -1,183 +1,258 @@
-import * as crypto from "crypto-js";
 import {
-  AuthTokens,
-  SignEncryptPayload,
-  DecryptVerifyPayload,
-  EncryptPayload,
-  DecryptPayload,
-  Headers,
-} from "./types";
+  CognitoUserPool,
+  CognitoUser,
+  AuthenticationDetails,
+} from "amazon-cognito-identity-js";
 
-class Crittora {
-  private readonly clientId: string;
-  private readonly clientSecret: string;
-  private readonly userPoolId: string;
-  private readonly baseUrl: string =
-    "https://cognito-idp.us-east-1.amazonaws.com/";
+export class Crittora {
+  private cognito_endpoint: string;
+  private base_url: string;
+  private user_pool_id: string;
+  private client_id: string;
+  private userPool: CognitoUserPool;
 
-  constructor(clientId: string, clientSecret: string, userPoolId: string) {
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
-    this.userPoolId = userPoolId;
+  constructor() {
+    this.cognito_endpoint = "https://cognito-idp.us-east-1.amazonaws.com/";
+    // dev
+    this.base_url = "https://dev-api.crittoraapi.com";
+    this.user_pool_id = "us-east-1_Zl27AI2Vr";
+    this.client_id = "5ok4074j0itrc27gbihn5s2bgn";
+
+    // Prod
+    // this.base_url = 'https://api.crittoraapis.com';
+    // this.user_pool_id = 'us-east-1_Tmljk4Uiw';
+    // this.client_id = '5cvaao4qgphfp38g433vi5e82u';
+
+    this.userPool = new CognitoUserPool({
+      UserPoolId: this.user_pool_id,
+      ClientId: this.client_id,
+    });
   }
 
-  private generateSecretHash(username: string): string {
-    const message = username + this.clientId;
-    const hash = crypto.HmacSHA256(message, this.clientSecret);
-    return crypto.enc.Base64.stringify(hash);
+  private getHeaders(idToken: string): Headers {
+    const headers = new Headers({
+      Authorization: `Bearer ${idToken}`,
+      api_key: process.env.API_KEY || "",
+      access_key: process.env.ACCESS_KEY || "",
+      secret_key: process.env.SECRET_KEY || "",
+      "Content-Type": "application/json",
+    });
+    return headers;
   }
 
-  public async authenticate(
+  async authenticate(
     username: string,
     password: string
+  ): Promise<{
+    IdToken: string;
+    AccessToken: string;
+    RefreshToken: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      const authenticationDetails = new AuthenticationDetails({
+        Username: username,
+        Password: password,
+      });
+
+      const cognitoUser = new CognitoUser({
+        Username: username,
+        Pool: this.userPool,
+      });
+
+      cognitoUser.authenticateUser(authenticationDetails, {
+        onSuccess: (result) => {
+          resolve({
+            IdToken: result.getIdToken().getJwtToken(),
+            AccessToken: result.getAccessToken().getJwtToken(),
+            RefreshToken: result.getRefreshToken().getToken(),
+          });
+        },
+        onFailure: (err) => {
+          reject(err);
+        },
+      });
+    });
+  }
+
+  async encrypt(
+    idToken: string,
+    data: string,
+    permissions?: string[]
   ): Promise<string> {
-    if (!username || !password) {
-      throw new Error("Username and password are required");
-    }
+    const url = `${this.base_url}/encrypt`;
+    const headers = this.getHeaders(idToken);
 
-    const secretHash = this.generateSecretHash(username);
+    console.log("Request URL:", url);
+    console.log("Request Headers:", Object.fromEntries(headers));
 
-    const body = {
-      AuthParameters: {
-        USERNAME: username,
-        PASSWORD: password,
-        SECRET_HASH: secretHash,
-      },
-      AuthFlow: "USER_PASSWORD_AUTH",
-      ClientId: this.clientId,
+    const payload = {
+      data: data,
+      requested_actions: ["e"],
     };
 
+    if (permissions) {
+      Object.assign(payload, { permissions });
+    }
+
+    console.log("Request Payload:", payload);
+
     try {
-      const response = await fetch(this.baseUrl, {
+      const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-amz-json-1.1",
-          "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
-        },
-        body: JSON.stringify(body),
+        headers: headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error("Response status:", response.status);
+        console.error("Response body:", errorBody);
+        throw new Error(
+          `HTTP error! status: ${response.status}, body: ${errorBody}`
+        );
+      }
+
+      const responseData = await response.json();
+      console.log("Response Data:", responseData);
+
+      if ("body" in responseData) {
+        const body = JSON.parse(responseData.body);
+        return body.encrypted_data;
+      } else {
+        throw new Error(
+          `An error has occurred, please check your credentials and try again. ${JSON.stringify(
+            responseData
+          )}`
+        );
+      }
+    } catch (error) {
+      console.error("Encryption error:", error);
+      throw error;
+    }
+  }
+
+  async decrypt(
+    idToken: string,
+    encryptedData: string,
+    permissions?: string[]
+  ): Promise<string> {
+    const url = `${this.base_url}/decrypt`;
+    const headers = this.getHeaders(idToken);
+
+    const payload = {
+      encrypted_data: encryptedData,
+    };
+
+    if (permissions) {
+      Object.assign(payload, { permissions });
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const responseJson = await response.json();
+      const responseData = await response.json();
 
-      if (responseJson.AuthenticationResult?.IdToken) {
-        return responseJson.AuthenticationResult.IdToken;
+      if ("body" in responseData) {
+        const body = JSON.parse(responseData.body);
+        return body.decrypted_data;
       } else {
-        throw new Error("Authentication failed: No IdToken received");
+        throw new Error(
+          "An error has occurred, please check your credentials and try again."
+        );
       }
     } catch (error) {
-      console.error("Authentication error:", error);
-      throw new Error("Authentication failed");
+      console.error("Decryption error:", error);
+      throw error;
     }
   }
 
-  private createHeaders(
+  async signEncrypt(
     idToken: string,
-    apiKey: string,
-    accessKey: string,
-    secretKey: string
-  ): Headers {
-    return {
-      Authorization: `Bearer ${idToken}`,
-      "x-api-key": apiKey,
-      "x-access-key": accessKey,
-      "x-secret-key": secretKey,
-      "Content-Type": "application/json",
-    };
-  }
-
-  private async makeApiCall(
-    url: string,
-    headers: Headers,
-    payload: any
-  ): Promise<Response> {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `API call failed: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return response;
-  }
-
-  public async signEncrypt(
-    idToken: string,
-    apiKey: string,
-    accessKey: string,
-    secretKey: string,
     data: string,
-    permissions?: string[],
-    url: string = "SIGN_ENCRYPT_URL"
-  ): Promise<Response> {
-    const headers = this.createHeaders(idToken, apiKey, accessKey, secretKey);
-    const payload: SignEncryptPayload = {
+    permissions?: string[]
+  ): Promise<string> {
+    const url = `${this.base_url}/sign-encrypt`;
+    const headers = this.getHeaders(idToken);
+    const payload = {
       data: data,
       requested_actions: ["e", "s"],
-      permissions: permissions,
     };
-    return this.makeApiCall(url, headers, payload);
+
+    if (permissions) {
+      Object.assign(payload, { permissions });
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      if ("body" in responseData) {
+        const body = JSON.parse(responseData.body);
+        return body.encrypted_data;
+      } else {
+        throw new Error(
+          "An error has occurred, please check your credentials and try again."
+        );
+      }
+    } catch (error) {
+      console.error("Sign and Encrypt error:", error);
+      throw error;
+    }
   }
 
-  public async decryptVerify(
+  async decryptVerify(
     idToken: string,
-    apiKey: string,
-    accessKey: string,
-    secretKey: string,
     encryptedData: string,
-    permissions?: string[],
-    url: string = "DECRYPT_VERIFY_URL"
-  ): Promise<Response> {
-    const headers = this.createHeaders(idToken, apiKey, accessKey, secretKey);
-    const payload: DecryptVerifyPayload = {
+    permissions?: string[]
+  ): Promise<any> {
+    const url = `${this.base_url}/decrypt-verify`;
+    const headers = this.getHeaders(idToken);
+    const payload = {
       encrypted_data: encryptedData,
-      permissions: permissions,
     };
-    return this.makeApiCall(url, headers, payload);
-  }
 
-  public async encrypt(
-    idToken: string,
-    apiKey: string,
-    accessKey: string,
-    secretKey: string,
-    data: string,
-    permissions?: string[],
-    url: string = "ENCRYPT_URL"
-  ): Promise<Response> {
-    const headers = this.createHeaders(idToken, apiKey, accessKey, secretKey);
-    const payload: EncryptPayload = {
-      data: data,
-      requested_actions: ["e"],
-      permissions: permissions,
-    };
-    return this.makeApiCall(url, headers, payload);
-  }
+    if (permissions) {
+      Object.assign(payload, { permissions });
+    }
 
-  public async decrypt(
-    idToken: string,
-    apiKey: string,
-    accessKey: string,
-    secretKey: string,
-    encryptedData: string,
-    permissions?: string[],
-    url: string = "DECRYPT_URL"
-  ): Promise<Response> {
-    const headers = this.createHeaders(idToken, apiKey, accessKey, secretKey);
-    const payload: DecryptPayload = {
-      encrypted_data: encryptedData,
-      permissions: permissions,
-    };
-    return this.makeApiCall(url, headers, payload);
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      if ("body" in responseData) {
+        return JSON.parse(responseData.body);
+      } else {
+        throw new Error(
+          "An error has occurred, please check your credentials and try again."
+        );
+      }
+    } catch (error) {
+      console.error("Decrypt and Verify error:", error);
+      throw error;
+    }
   }
 }
-
-export default Crittora;

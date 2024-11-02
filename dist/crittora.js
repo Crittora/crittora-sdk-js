@@ -7,133 +7,201 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import axios from "axios";
-import crypto from "crypto-js";
-import { COGNITO_API_URL, POST_ENCRYPT_URL, POST_DECRYPT_URL, POST_SIGN_URL, POST_VERIFY_URL, POST_SIGN_ENCRYPT_URL, POST_DECRYPT_VERIFY_URL, } from "./constants";
-class Crittora {
-    constructor(config) {
-        this.currentAccessToken = null;
-        this.accessTokenExpiry = null;
-        this.config = config;
-        this.currentAccessToken = config.currentAccessToken || null;
-        this.accessTokenExpiry = config.accessTokenExpiry || null;
+import { CognitoUserPool, CognitoUser, AuthenticationDetails, } from "amazon-cognito-identity-js";
+export class Crittora {
+    constructor() {
+        this.cognito_endpoint = "https://cognito-idp.us-east-1.amazonaws.com/";
+        // dev
+        this.base_url = "https://dev-api.crittoraapi.com";
+        this.user_pool_id = "us-east-1_Zl27AI2Vr";
+        this.client_id = "5ok4074j0itrc27gbihn5s2bgn";
+        // Prod
+        // this.base_url = 'https://api.crittoraapis.com';
+        // this.user_pool_id = 'us-east-1_Tmljk4Uiw';
+        // this.client_id = '5cvaao4qgphfp38g433vi5e82u';
+        this.userPool = new CognitoUserPool({
+            UserPoolId: this.user_pool_id,
+            ClientId: this.client_id,
+        });
     }
-    generateSecretHash(username, clientId, clientSecret) {
-        const message = username + clientId;
-        const hash = crypto.HmacSHA256(message, clientSecret);
-        return crypto.enc.Base64.stringify(hash);
+    getHeaders(idToken) {
+        const headers = new Headers({
+            Authorization: `Bearer ${idToken}`,
+            api_key: process.env.API_KEY || "",
+            access_key: process.env.ACCESS_KEY || "",
+            secret_key: process.env.SECRET_KEY || "",
+            "Content-Type": "application/json",
+        });
+        return headers;
     }
-    fetchAccessToken() {
+    authenticate(username, password) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { credentialsUsername, credentialsPassword, cognitoPoolClientId, clientId, clientSecret, fetchTokenOnEveryRequest, } = this.config;
-            if (fetchTokenOnEveryRequest) {
-                this.currentAccessToken = null;
-                this.accessTokenExpiry = null;
-            }
-            const currentTime = new Date().getTime();
-            if (this.currentAccessToken &&
-                this.accessTokenExpiry &&
-                currentTime < this.accessTokenExpiry) {
-                return;
-            }
-            const secretHash = this.generateSecretHash(credentialsUsername, clientId, clientSecret);
-            const body = {
-                AuthParameters: {
-                    USERNAME: credentialsUsername,
-                    PASSWORD: credentialsPassword,
-                    SECRET_HASH: secretHash,
-                },
-                AuthFlow: "USER_PASSWORD_AUTH",
-                ClientId: clientId,
-            };
-            try {
-                const response = yield axios.post(COGNITO_API_URL, body, {
-                    headers: {
-                        "Content-Type": "application/x-amz-json-1.1",
-                        "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
+            return new Promise((resolve, reject) => {
+                const authenticationDetails = new AuthenticationDetails({
+                    Username: username,
+                    Password: password,
+                });
+                const cognitoUser = new CognitoUser({
+                    Username: username,
+                    Pool: this.userPool,
+                });
+                cognitoUser.authenticateUser(authenticationDetails, {
+                    onSuccess: (result) => {
+                        resolve({
+                            IdToken: result.getIdToken().getJwtToken(),
+                            AccessToken: result.getAccessToken().getJwtToken(),
+                            RefreshToken: result.getRefreshToken().getToken(),
+                        });
+                    },
+                    onFailure: (err) => {
+                        reject(err);
                     },
                 });
-                const responseData = response.data;
-                if (responseData.AuthenticationResult) {
-                    this.currentAccessToken = responseData.AuthenticationResult.IdToken;
-                    this.accessTokenExpiry =
-                        new Date().getTime() +
-                            responseData.AuthenticationResult.ExpiresIn * 1000;
+            });
+        });
+    }
+    encrypt(idToken, data, permissions) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const url = `${this.base_url}/encrypt`;
+            const headers = this.getHeaders(idToken);
+            console.log("Request URL:", url);
+            console.log("Request Headers:", Object.fromEntries(headers));
+            const payload = {
+                data: data,
+                requested_actions: ["e"],
+            };
+            if (permissions) {
+                Object.assign(payload, { permissions });
+            }
+            console.log("Request Payload:", payload);
+            try {
+                const response = yield fetch(url, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(payload),
+                });
+                if (!response.ok) {
+                    const errorBody = yield response.text();
+                    console.error("Response status:", response.status);
+                    console.error("Response body:", errorBody);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
+                }
+                const responseData = yield response.json();
+                console.log("Response Data:", responseData);
+                if ("body" in responseData) {
+                    const body = JSON.parse(responseData.body);
+                    return body.encrypted_data;
                 }
                 else {
-                    throw new Error("AuthenticationResult not found in the response");
+                    throw new Error(`An error has occurred, please check your credentials and try again. ${JSON.stringify(responseData)}`);
                 }
             }
             catch (error) {
-                this.handleError(error, "Failed to fetch access token");
+                console.error("Encryption error:", error);
+                throw error;
             }
         });
     }
-    makeAuthenticatedRequest(url, params, errorMessage) {
+    decrypt(idToken, encryptedData, permissions) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.fetchAccessToken();
-            console.log("Request Params:", params);
+            const url = `${this.base_url}/decrypt`;
+            const headers = this.getHeaders(idToken);
+            const payload = {
+                encrypted_data: encryptedData,
+            };
+            if (permissions) {
+                Object.assign(payload, { permissions });
+            }
             try {
-                const response = yield axios.post(url, params, {
-                    headers: {
-                        Authorization: `Bearer ${this.currentAccessToken}`,
-                        api_key: this.config.api_key,
-                        access_key: this.config.access_key,
-                        secret_key: this.config.secret_key,
-                        "Content-Type": "application/json",
-                    },
+                const response = yield fetch(url, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(payload),
                 });
-                console.log("Response Data:", response.data);
-                return response.data;
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const responseData = yield response.json();
+                if ("body" in responseData) {
+                    const body = JSON.parse(responseData.body);
+                    return body.decrypted_data;
+                }
+                else {
+                    throw new Error("An error has occurred, please check your credentials and try again.");
+                }
             }
             catch (error) {
-                this.handleError(error, errorMessage);
+                console.error("Decryption error:", error);
+                throw error;
             }
         });
     }
-    handleError(error, defaultMessage) {
-        var _a;
-        if (axios.isAxiosError(error)) {
-            console.error("Error Response:", ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
-            throw new Error(`${defaultMessage}: ${error.message}`);
-        }
-        else if (error instanceof Error) {
-            console.error("Error:", error.message);
-            throw new Error(`${defaultMessage}: ${error.message}`);
-        }
-        else {
-            throw new Error(defaultMessage);
-        }
-    }
-    encrypt(params) {
+    signEncrypt(idToken, data, permissions) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.makeAuthenticatedRequest(POST_ENCRYPT_URL, params, "Failed to encrypt data");
+            const url = `${this.base_url}/sign-encrypt`;
+            const headers = this.getHeaders(idToken);
+            const payload = {
+                data: data,
+                requested_actions: ["e", "s"],
+            };
+            if (permissions) {
+                Object.assign(payload, { permissions });
+            }
+            try {
+                const response = yield fetch(url, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(payload),
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const responseData = yield response.json();
+                if ("body" in responseData) {
+                    const body = JSON.parse(responseData.body);
+                    return body.encrypted_data;
+                }
+                else {
+                    throw new Error("An error has occurred, please check your credentials and try again.");
+                }
+            }
+            catch (error) {
+                console.error("Sign and Encrypt error:", error);
+                throw error;
+            }
         });
     }
-    decrypt(params) {
+    decryptVerify(idToken, encryptedData, permissions) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.makeAuthenticatedRequest(POST_DECRYPT_URL, params, "Failed to decrypt data");
-        });
-    }
-    sign(params) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.makeAuthenticatedRequest(POST_SIGN_URL, params, "Failed to sign data");
-        });
-    }
-    verify(params) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.makeAuthenticatedRequest(POST_VERIFY_URL, params, "Failed to verify data");
-        });
-    }
-    signEncrypt(params) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.makeAuthenticatedRequest(POST_SIGN_ENCRYPT_URL, params, "Failed to sign / encrypt data");
-        });
-    }
-    decryptVerify(params) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.makeAuthenticatedRequest(POST_DECRYPT_VERIFY_URL, params, "Failed to verify / decrypt data");
+            const url = `${this.base_url}/decrypt-verify`;
+            const headers = this.getHeaders(idToken);
+            const payload = {
+                encrypted_data: encryptedData,
+            };
+            if (permissions) {
+                Object.assign(payload, { permissions });
+            }
+            try {
+                const response = yield fetch(url, {
+                    method: "POST",
+                    headers: headers,
+                    body: JSON.stringify(payload),
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const responseData = yield response.json();
+                if ("body" in responseData) {
+                    return JSON.parse(responseData.body);
+                }
+                else {
+                    throw new Error("An error has occurred, please check your credentials and try again.");
+                }
+            }
+            catch (error) {
+                console.error("Decrypt and Verify error:", error);
+                throw error;
+            }
         });
     }
 }
-export { Crittora };
