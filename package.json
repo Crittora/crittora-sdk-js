@@ -13,10 +13,10 @@
   "scripts": {
     "test": "jest",
     "clean": "rimraf dist",
-    "build": "tsc",
-    "prepare": "npm run build",
+    "build": "NODE_ENV=production tsc",
+    "prepare": "NODE_ENV=production npm run build",
     "prepublishOnly": "npm test",
-    "prepack": "npm run build",
+    "prepack": "NODE_ENV=production npm run build",
     "lint": "eslint . --ext .ts",
     "verify": "npm run clean && npm run build && npm run test",
     "release": "npm run verify && npm version patch && npm publish",
