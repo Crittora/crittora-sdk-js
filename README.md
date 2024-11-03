@@ -9,15 +9,15 @@ Crittora SDK provides secure methods for encrypting, decrypting, signing, verify
   - [Installation](#installation)
   - [Configuration](#configuration)
     - [Environment Variables](#environment-variables)
-    - [Environment Selection](#environment-selection)
+    - [Environment Configuration](#environment-configuration)
   - [Usage](#usage)
     - [Authentication](#authentication)
     - [Encryption](#encryption)
     - [Decryption](#decryption)
     - [Decrypt-Verify](#decrypt-verify)
+  - [Demo Project](#demo-project)
   - [Error Handling](#error-handling)
   - [Types](#types)
-  - [Running Tests](#running-tests)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -33,33 +33,23 @@ npm install @wutif/crittora
 
 ### Environment Variables
 
-Create a `.env` file in the root of your project:
-
 ```dotenv
-# Optional: Defaults to development if not set
-NODE_ENV=development
-
 # Required API keys
 API_KEY=your_api_key
 ACCESS_KEY=your_access_key
 SECRET_KEY=your_secret_key
 ```
 
-### Environment Selection
+### Environment Configuration
 
-The SDK supports two environments:
+The SDK currently uses the following configuration:
 
-**Development** (default):
-
-- Base URL: https://dev-api.crittoraapi.com
-- Cognito Pool: us-east-1_Zl27AI2Vr
-
-**Production**:
-
+- Cognito Endpoint: https://cognito-idp.us-east-1.amazonaws.com/
 - Base URL: https://api.crittoraapis.com
-- Cognito Pool: us-east-1_Tmljk4Uiw
+- User Pool ID: us-east-1_Tmljk4Uiw
+- Client ID: 5cvaao4qgphfp38g433vi5e82u
 
-To select an environment, set the `NODE_ENV` environment variable to either `development` or `production`.
+To use different configuration values, you can set them via environment variables (coming soon).
 
 ## Usage
 
@@ -135,6 +125,44 @@ crittora
   .catch((error) => {
     console.error("Decrypt-verify failed:", error);
   });
+```
+
+## Demo Project
+
+For a complete implementation example, check out our [demo project](https://github.com/Crittora/crittora-demo). This project demonstrates:
+
+- Authentication with AWS Cognito
+- Environment variable management
+- Integration with Crittora's encryption services
+- Basic API endpoints for encryption/decryption
+- Frontend implementation examples
+
+The demo includes a full web application structure:
+
+```
+crittora-demo/
+├── public/
+│   ├── css/
+│   ├── js/
+│   └── index.html
+├── test.js
+├── server.js
+├── .env
+└── package.json
+```
+
+To get started with the demo:
+
+```bash
+git clone https://github.com/Crittora/crittora-demo.git
+cd crittora-demo
+npm install
+```
+
+Configure your environment variables and run:
+
+```bash
+npm start
 ```
 
 ## Error Handling
@@ -219,15 +247,6 @@ interface DecryptParams {
   transactionId?: string;
   requested_actions?: string[];
 }
-```
-
-## Running Tests
-
-To run tests:
-
-```bash
-npm install --save-dev jest ts-jest @types/jest
-npm test
 ```
 
 ## Contributing
