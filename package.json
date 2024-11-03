@@ -56,12 +56,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://gitlab.com/wutif/crittora/crittora-sdk-node.git"
+    "url": "git+https://github.com/Crittora/crittora-sdk-js.git"
   },
   "bugs": {
-    "url": "https://gitlab.com/wutif/crittora/issues"
+    "url": "https://github.com/Crittora/crittora-sdk-js/issues"
   },
-  "homepage": "https://gitlab.com/wutif/crittora#readme",
+  "homepage": "https://github.com/Crittora/crittora-sdk-js#readme",
   "publishConfig": {
     "access": "public"
   },
