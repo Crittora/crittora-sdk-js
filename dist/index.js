@@ -14,6 +14,11 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+__exportStar(require("./client"), exports);
 __exportStar(require("./crittora"), exports);
 __exportStar(require("./types"), exports);
+__exportStar(require("./errors"), exports);
+__exportStar(require("./auth/types"), exports);
+__exportStar(require("./auth/bearer"), exports);
+__exportStar(require("./auth/cognito"), exports);
 //# sourceMappingURL=index.js.map
