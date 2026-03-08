@@ -1,237 +1,288 @@
-import { Crittora } from "../src/crittora";
-import {
-  CrittoraError,
-  AuthenticationError,
-} from "../src/errors/crittoraErrors";
 import { CognitoUser } from "amazon-cognito-identity-js";
+import {
+  bearerToken,
+  CognitoAuthProvider,
+  Crittora,
+  CrittoraClient,
+  DecryptError,
+  EncryptError,
+} from "../src";
 
-describe("Crittora", () => {
-  let crittora: Crittora;
-  const mockIdToken = "mock-id-token";
-  const mockEncryptedData = "encrypted-data";
+describe("CrittoraClient", () => {
+  const fetchMock = jest.fn();
 
   beforeEach(() => {
-    crittora = new Crittora();
-    jest.clearAllMocks();
+    fetchMock.mockReset();
   });
 
-  describe("decryptVerify", () => {
-    it("should successfully decrypt and verify data", async () => {
-      const mockDecryptedData = "decrypted-data";
-      const mockIsValid = true;
-
-      globalThis.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          body: JSON.stringify({
-            decrypted_data: mockDecryptedData,
-            is_valid_signature: mockIsValid,
-          }),
-        }),
-      });
-
-      const result = await crittora.decryptVerify(
-        mockIdToken,
-        mockEncryptedData
-      );
-
-      expect(result).toEqual({
-        decrypted_data: mockDecryptedData,
-        is_valid_signature: mockIsValid,
-      });
+  it("encrypts with normalized input and output", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ encrypted_data: "org-envelope" }),
+      headers: new Headers(),
     });
 
-    it("should handle errors appropriately", async () => {
-      globalThis.fetch = jest
-        .fn()
-        .mockRejectedValue(new Error("Network error"));
-
-      await expect(
-        crittora.decryptVerify(mockIdToken, mockEncryptedData)
-      ).rejects.toThrow(CrittoraError);
+    const client = new CrittoraClient({
+      fetch: fetchMock as typeof globalThis.fetch,
+      credentials: { apiKey: "api-key" },
+      auth: bearerToken("id-token"),
     });
 
-    it("should include permissions when provided", async () => {
-      const mockPermissions = ["read", "write"];
-      const mockDecryptedData = "decrypted-data";
-      const mockIsValid = true;
-
-      const fetchMock = jest.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          body: JSON.stringify({
-            decrypted_data: mockDecryptedData,
-            is_valid_signature: mockIsValid,
-          }),
-        }),
-      });
-      globalThis.fetch = fetchMock;
-
-      await crittora.decryptVerify(
-        mockIdToken,
-        mockEncryptedData,
-        mockPermissions
-      );
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining(JSON.stringify(mockPermissions)),
-        })
-      );
+    const result = await client.encrypt({
+      data: "hello",
+      permissions: [{ partnerId: "partner-1", actions: ["read"] }],
     });
 
-    it("should handle invalid response format", async () => {
-      globalThis.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          body: "invalid-json",
+    expect(result).toEqual({
+      encryptedData: "org-envelope",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.crittoraapis.com/encrypt",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer id-token",
+          api_key: "api-key",
         }),
-      });
+      })
+    );
+  });
 
-      await expect(
-        crittora.decryptVerify(mockIdToken, mockEncryptedData)
-      ).rejects.toThrow(CrittoraError);
+  it("unwraps legacy lambda-style responses", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+      body: JSON.stringify({
+        decrypted_data: "plaintext",
+        is_valid_signature: true,
+        signed_by: "Partner A",
+        signed_timestamp: "2026-03-08T01:00:00Z",
+      }),
+    }),
+      headers: new Headers(),
+    });
+
+    const client = new CrittoraClient({
+      fetch: fetchMock as typeof globalThis.fetch,
+    });
+
+    const result = await client.decryptVerify({
+      encryptedData: "ciphertext",
+    });
+
+    expect(result).toEqual({
+      decryptedData: "plaintext",
+      isValidSignature: true,
+      signedBy: "Partner A",
+      signedTimestamp: "2026-03-08T01:00:00Z",
+      repudiator: undefined,
     });
   });
 
-  describe("authenticate", () => {
-    it("should successfully authenticate user", async () => {
-      const mockUsername = "testuser";
-      const mockPassword = "testpass";
-      const mockAuthResponse = {
-        IdToken: "mock-id-token",
-        AccessToken: "mock-access-token",
-        RefreshToken: "mock-refresh-token",
-      };
-
-      // Mock the CognitoUser.authenticateUser method
-      jest
-        .spyOn(CognitoUser.prototype, "authenticateUser")
-        .mockImplementation((authDetails, callbacks) => {
-          callbacks.onSuccess({
-            getIdToken: () => ({
-              getJwtToken: () => mockAuthResponse.IdToken,
-              payload: {},
-              getExpiration: () => 0,
-              getIssuedAt: () => 0,
-              decodePayload: () => ({}),
-            }),
-            getAccessToken: () => ({
-              getJwtToken: () => mockAuthResponse.AccessToken,
-              payload: {},
-              getExpiration: () => 0,
-              getIssuedAt: () => 0,
-              decodePayload: () => ({}),
-            }),
-            getRefreshToken: () => ({
-              getToken: () => mockAuthResponse.RefreshToken,
-            }),
-            isValid: () => true,
-          });
-        });
-
-      const result = await crittora.authenticate(mockUsername, mockPassword);
-      expect(result).toEqual(mockAuthResponse);
+  it("preserves failed signature verification metadata", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          decrypted_data: "plaintext",
+          is_valid_signature: false,
+          repudiator: "Partner B",
+        }),
+      headers: new Headers(),
     });
 
-    it("should handle authentication failure", async () => {
-      const mockUsername = "testuser";
-      const mockPassword = "wrongpass";
+    const client = new CrittoraClient({
+      fetch: fetchMock as typeof globalThis.fetch,
+    });
 
-      jest
-        .spyOn(CognitoUser.prototype, "authenticateUser")
-        .mockImplementation((authDetails, callbacks) => {
-          callbacks.onFailure(new Error("Invalid credentials"));
-        });
+    const result = await client.decryptVerify({
+      encryptedData: "ciphertext",
+    });
 
-      await expect(
-        crittora.authenticate(mockUsername, mockPassword)
-      ).rejects.toThrow(AuthenticationError);
+    expect(result).toEqual({
+      decryptedData: "plaintext",
+      isValidSignature: false,
+      signedBy: undefined,
+      signedTimestamp: undefined,
+      repudiator: "Partner B",
     });
   });
 
-  describe("encrypt", () => {
-    it("should successfully encrypt data", async () => {
-      const mockData = "sensitive-data";
-      const mockEncryptedResult = "encrypted-result";
+  it("sign-encrypts with normalized input and output", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ encrypted_data: "org-envelope" }),
+      headers: new Headers(),
+    });
 
-      globalThis.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          body: JSON.stringify({
-            encrypted_data: mockEncryptedResult,
-          }),
+    const client = new CrittoraClient({
+      fetch: fetchMock as typeof globalThis.fetch,
+      auth: bearerToken("id-token"),
+    });
+
+    const result = await client.signEncrypt({
+      data: "hello",
+      permissions: [{ partnerId: "partner-1", actions: ["read"] }],
+    });
+
+    expect(result).toEqual({
+      encryptedData: "org-envelope",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.crittoraapis.com/sign-encrypt",
+      expect.objectContaining({
+        body: JSON.stringify({
+          data: "hello",
+          requested_actions: ["e", "s"],
+          permissions: [
+            {
+              partner_id: "partner-1",
+              permissions: ["read"],
+            },
+          ],
         }),
-      });
-
-      const result = await crittora.encrypt(mockIdToken, mockData);
-      expect(result).toBe(mockEncryptedResult);
-    });
-
-    it("should handle encryption errors", async () => {
-      const mockData = "sensitive-data";
-
-      globalThis.fetch = jest
-        .fn()
-        .mockRejectedValue(new Error("Encryption failed"));
-
-      await expect(crittora.encrypt(mockIdToken, mockData)).rejects.toThrow(
-        CrittoraError
-      );
-    });
-
-    it("should include permissions when provided", async () => {
-      const mockData = "sensitive-data";
-      const mockPermissions = ["read", "write"];
-      const mockEncryptedResult = "encrypted-result";
-
-      const fetchMock = jest.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          body: JSON.stringify({
-            encrypted_data: mockEncryptedResult,
-          }),
-        }),
-      });
-      globalThis.fetch = fetchMock;
-
-      await crittora.encrypt(mockIdToken, mockData, mockPermissions);
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          body: expect.stringContaining(JSON.stringify(mockPermissions)),
-        })
-      );
-    });
+      })
+    );
   });
 
-  describe("decrypt", () => {
-    it("should successfully decrypt data", async () => {
-      const mockDecryptedResult = "decrypted-result";
+  it("maps transport failures into resource-specific errors", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      text: async () => JSON.stringify({ message: "boom" }),
+      headers: new Headers(),
+      status: 500,
+    });
 
-      globalThis.fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          body: JSON.stringify({
-            decrypted_data: mockDecryptedResult,
-          }),
+    const client = new CrittoraClient({
+      fetch: fetchMock as typeof globalThis.fetch,
+    });
+
+    await expect(
+      client.encrypt({
+        data: "hello",
+      })
+    ).rejects.toBeInstanceOf(EncryptError);
+
+    await expect(
+      client.decrypt({
+        encryptedData: "ciphertext",
+      })
+    ).rejects.toBeInstanceOf(DecryptError);
+  });
+
+  it("creates auth-scoped clients with withAuth", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ decrypted_data: "plaintext" }),
+      headers: new Headers(),
+    });
+
+    const client = new CrittoraClient({
+      fetch: fetchMock as typeof globalThis.fetch,
+    }).withAuth({ type: "bearer", token: "scoped-token" });
+
+    await client.decrypt({ encryptedData: "ciphertext" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.crittoraapis.com/decrypt",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer scoped-token",
         }),
+      })
+    );
+  });
+});
+
+describe("CognitoAuthProvider", () => {
+  it("authenticates and stores bearer tokens", async () => {
+    jest
+      .spyOn(CognitoUser.prototype, "authenticateUser")
+      .mockImplementation((authDetails, callbacks) => {
+        callbacks.onSuccess({
+          getIdToken: () => ({
+            getJwtToken: () => "id-token",
+          }),
+          getAccessToken: () => ({
+            getJwtToken: () => "access-token",
+          }),
+          getRefreshToken: () => ({
+            getToken: () => "refresh-token",
+          }),
+        } as never);
       });
 
-      const result = await crittora.decrypt(mockIdToken, mockEncryptedData);
-      expect(result).toBe(mockDecryptedResult);
+    const auth = new CognitoAuthProvider({
+      userPoolId: "us-east-1_ABCdef123",
+      clientId: "1234567890abcdefghijklmnopqr",
     });
 
-    it("should handle decryption errors", async () => {
-      globalThis.fetch = jest
-        .fn()
-        .mockRejectedValue(new Error("Decryption failed"));
-
-      await expect(
-        crittora.decrypt(mockIdToken, mockEncryptedData)
-      ).rejects.toThrow(CrittoraError);
+    const tokens = await auth.login({
+      username: "user",
+      password: "pass",
     });
+
+    expect(tokens).toEqual({
+      idToken: "id-token",
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+    await expect(auth.getAuthorizationHeader()).resolves.toBe("Bearer id-token");
+  });
+});
+
+describe("Crittora v1 shim", () => {
+  const fetchMock = jest.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    process.env.API_KEY = "api-key";
+    process.env.ACCESS_KEY = "access-key";
+    process.env.SECRET_KEY = "secret-key";
+  });
+
+  it("preserves the legacy positional encrypt API", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ encrypted_data: "ciphertext" }),
+      headers: new Headers(),
+    });
+
+    const sdk = new Crittora({
+      fetch: fetchMock as typeof globalThis.fetch,
+    });
+
+    const result = await sdk.encrypt("id-token", "hello", ["read", "write"]);
+    expect(result).toBe("ciphertext");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.crittoraapis.com/encrypt",
+      expect.objectContaining({
+        body: JSON.stringify({
+          data: "hello",
+          requested_actions: ["e"],
+          permissions: [
+            {
+              partner_id: "default",
+              permissions: ["read", "write"],
+            },
+          ],
+        }),
+      })
+    );
+  });
+
+  it("preserves the legacy positional signEncrypt API", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({ encrypted_data: "org-envelope" }),
+      headers: new Headers(),
+    });
+
+    const sdk = new Crittora({
+      fetch: fetchMock as typeof globalThis.fetch,
+    });
+
+    const result = await sdk.signEncrypt("id-token", "hello", ["read"]);
+    expect(result).toBe("org-envelope");
   });
 });

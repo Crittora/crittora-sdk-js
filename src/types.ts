@@ -1,94 +1,134 @@
-// Authentication Types
-export interface AuthResponse {
-  IdToken: string;
-  AccessToken: string;
-  RefreshToken: string;
+export type FetchLike = typeof globalThis.fetch;
+
+export interface ApiCredentials {
+  apiKey: string;
+  accessKey?: string;
+  secretKey?: string;
 }
 
-// Permission Types
+export interface RetryOptions {
+  maxAttempts?: number;
+  backoffMs?: number;
+  retryOn?: number[];
+}
+
+export interface BearerAuthConfig {
+  type: "bearer";
+  token: string;
+}
+
 export interface Permission {
+  partnerId: string;
+  actions: string[];
+}
+
+export interface EncryptInput {
+  data: string;
+  permissions?: Permission[];
+}
+
+export interface EncryptResult {
+  encryptedData: string;
+}
+
+export interface SignEncryptInput {
+  data: string;
+  permissions?: Permission[];
+}
+
+export interface SignEncryptResult {
+  encryptedData: string;
+}
+
+export interface DecryptInput {
+  encryptedData: string;
+  permissions?: Permission[];
+}
+
+export interface DecryptResult {
+  decryptedData: string;
+}
+
+export interface DecryptVerifyInput {
+  encryptedData: string;
+  permissions?: Permission[];
+}
+
+export interface DecryptVerifyResult {
+  decryptedData: string;
+  isValidSignature: boolean;
+  signedBy?: string;
+  signedTimestamp?: string;
+  repudiator?: string;
+}
+
+export interface AuthTokens {
+  idToken: string;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface CognitoAuthConfig {
+  userPoolId: string;
+  clientId: string;
+  username?: string;
+  password?: string;
+}
+
+export interface CrittoraClientOptions {
+  baseUrl?: string;
+  credentials?: ApiCredentials;
+  auth?: BearerAuthConfig | import("./auth/types").AuthProvider;
+  fetch?: FetchLike;
+  timeoutMs?: number;
+  retry?: RetryOptions;
+  headers?: Record<string, string>;
+  userAgent?: string;
+}
+
+export interface RequestOptions {
+  path: string;
+  method?: "POST";
+  body?: unknown;
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+}
+
+export interface RequestContext {
+  baseUrl: string;
+  credentials?: ApiCredentials;
+  headers?: Record<string, string>;
+  timeoutMs: number;
+  userAgent?: string;
+}
+
+export interface WirePermission {
   partner_id: string;
   permissions: string[];
 }
 
-// Base Types
-export interface BaseParams {
-  data: string;
-  requested_actions: string[];
-  permissions?: Permission[];
-}
-
-export interface BaseResponse {
-  encrypted_data?: string;
-  decrypted_data?: string;
-  transactionId?: string;
-}
-
-// Encryption Types
-export interface EncryptParams extends BaseParams {}
-
-export interface EncryptResponse extends BaseResponse {
+export interface WireEncryptResult {
   encrypted_data: string;
 }
 
-// Decryption Types
-export interface DecryptParams {
+export interface WireSignEncryptResult {
   encrypted_data: string;
-  transactionId?: string;
-  requested_actions?: string[];
 }
 
-export interface DecryptResponse extends BaseResponse {
+export interface WireDecryptResult {
   decrypted_data: string;
 }
 
-// Sign-Encrypt Types
-export interface SignEncryptParams extends BaseParams {}
-
-export interface SignEncryptResponse {
-  encryption: {
-    transactionId: string;
-    encrypted_data: string;
-  };
-  signature: {
-    transactionId: string;
-    signature: string;
-  };
-}
-
-// Decrypt-Verify Types
-export interface DecryptVerifyParams {
-  encrypted_data: string;
-  transactionId?: string;
-  requested_actions?: string[];
-  permissions?: string[];
-}
-
-export interface DecryptVerifyResponse {
+export interface WireDecryptVerifyResult {
   decrypted_data: string;
   is_valid_signature: boolean;
+  signed_by?: string;
+  signed_timestamp?: string;
+  repudiator?: string;
 }
 
-// Configuration Types
-export interface CrittoraConfig {
-  cognito_endpoint?: string;
-  base_url?: string;
-  user_pool_id?: string;
-  client_id?: string;
+export interface LegacyAuthResponse {
+  IdToken: string;
+  AccessToken: string;
+  RefreshToken: string;
 }
-
-// Utility Types
-export interface Headers {
-  Authorization: string;
-  api_key: string;
-  access_key: string;
-  secret_key: string;
-  "Content-Type": string;
-}
-
-// Import Cognito types
-import {
-  CognitoUserPool,
-  CognitoUser,
-  AuthenticationDetails,
-} from "amazon-cognito-identity-js";

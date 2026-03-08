@@ -1,12 +1,14 @@
 {
-  "name": "@wutif/crittora",
-  "version": "1.1.4",
-  "description": "Crittora - Encryption and Signing SDK by Wutif",
+  "name": "@crittora/sdk-js",
+  "version": "2.0.0",
+  "description": "Crittora JavaScript SDK",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "CHANGELOG.md",
+    "docs",
     "LICENSE",
     "README.md"
   ],
@@ -15,7 +17,7 @@
     "clean": "rimraf dist",
     "build": "NODE_ENV=production tsc",
     "prepare": "NODE_ENV=production npm run build",
-    "prepublishOnly": "npm test",
+    "prepublishOnly": "npm run verify",
     "prepack": "NODE_ENV=production npm run build",
     "lint": "eslint . --ext .ts",
     "verify": "npm run clean && npm run build && npm run test",
@@ -26,10 +28,10 @@
   },
   "keywords": [
     "encryption",
-    "signing",
     "sdk",
-    "cryptography",
-    "wutif"
+    "secure-messaging",
+    "data-protection",
+    "crittora"
   ],
   "author": "Erik Rowan <erik@crittora.com>, Gerardo I. Ornelas <gerardo@crittora.com>",
   "license": "MIT",
@@ -39,11 +41,20 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./auth-cognito": {
+      "types": "./dist/auth/cognito.d.ts",
+      "require": "./dist/auth/cognito.js",
+      "default": "./dist/auth/cognito.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "require": "./dist/errors.js",
+      "default": "./dist/errors.js"
     }
   },
   "dependencies": {
-    "amazon-cognito-identity-js": "^6.3.12",
-    "dotenv": "^16.4.5"
+    "amazon-cognito-identity-js": "^6.3.12"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
@@ -66,6 +77,6 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

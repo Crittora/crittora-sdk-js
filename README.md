@@ -1,258 +1,418 @@
-# Crittora SDK
+# Crittora JavaScript SDK
 
-Crittora SDK provides secure methods for encrypting, decrypting, signing, verifying, and combining these operations on data. It uses AWS Cognito for authentication and the Fetch API for HTTP requests.
+The Crittora JavaScript SDK is a typed secure-message client for the Crittora API.
+
+It supports exactly two application workflows:
+
+- confidentiality only: `encrypt()` -> `decrypt()`
+- confidentiality plus authenticity: `signEncrypt()` -> `decryptVerify()`
+
+This package now exposes a v2-style, instance-based client designed for predictable integration in production systems:
+
+- explicit client construction
+- explicit credentials and auth wiring
+- transport-level timeout and retry controls
+- typed request and response objects
+- stable SDK error classes
+
+The legacy `Crittora` class is still exported as a compatibility shim for existing consumers, but new integrations should use `CrittoraClient`.
 
 ## Table of Contents
 
-- [Crittora SDK](#crittora-sdk)
-  - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
-  - [Configuration](#configuration)
-    - [Environment Variables](#environment-variables)
-    - [Environment Configuration](#environment-configuration)
-  - [Usage](#usage)
-    - [Authentication](#authentication)
-    - [Encryption](#encryption)
-    - [Decryption](#decryption)
-    - [Decrypt-Verify](#decrypt-verify)
-  - [Demo Project](#demo-project)
-  - [Error Handling](#error-handling)
-  - [Types](#types)
-  - [Contributing](#contributing)
-  - [License](#license)
+- [Runtime Support](#runtime-support)
+- [Installation](#installation)
+- [Design Principles](#design-principles)
+- [Quick Start](#quick-start)
+- [Authentication](#authentication)
+- [Client Configuration](#client-configuration)
+- [Operations](#operations)
+- [Errors](#errors)
+- [Migration from v1](#migration-from-v1)
+- [Additional Documentation](#additional-documentation)
+
+## Runtime Support
+
+- Node.js 18 or later
+- Any runtime that provides a compatible `fetch` implementation, or where one is passed explicitly via the client options
 
 ## Installation
 
-To install the Crittora SDK, run:
-
 ```bash
-npm install @wutif/crittora
+npm install @crittora/sdk-js
 ```
 
-## Configuration
+## Design Principles
 
-### Environment Variables
+The v2 client is built around a few constraints that matter for SDK consumers:
 
-```dotenv
-# Required API keys
-API_KEY=your_api_key
-ACCESS_KEY=your_access_key
-SECRET_KEY=your_secret_key
+- No hidden process-global configuration is required for the primary API.
+- Client instances are isolated, so one process can talk to multiple environments safely.
+- Public JavaScript and TypeScript types use camelCase, while wire-format translation stays internal.
+- Auth is composable rather than hard-coded into every request path.
+- Errors preserve transport and backend context so callers can make policy decisions.
+
+## Quick Start
+
+### Bearer token auth
+
+```ts
+import { CrittoraClient } from "@crittora/sdk-js";
+
+const client = new CrittoraClient({
+  baseUrl: "https://api.crittoraapis.com",
+  credentials: {
+    apiKey: process.env.CRITTORA_API_KEY!,
+    accessKey: process.env.CRITTORA_ACCESS_KEY!,
+    secretKey: process.env.CRITTORA_SECRET_KEY!,
+  },
+  auth: {
+    type: "bearer",
+    token: process.env.CRITTORA_ID_TOKEN!,
+  },
+  timeoutMs: 10_000,
+  retry: {
+    maxAttempts: 2,
+  },
+});
+
+const result = await client.encrypt({
+  data: "sensitive data",
+  permissions: [
+    {
+      partnerId: "partner-123",
+      actions: ["read"],
+    },
+  ],
+});
+
+console.log(result.encryptedData);
 ```
 
-### Environment Configuration
+### Scoped auth
 
-The SDK currently uses the following configuration:
+If the same client configuration is reused across identities, create a base client and scope auth per request flow:
 
-- Cognito Endpoint: https://cognito-idp.us-east-1.amazonaws.com/
-- Base URL: https://api.crittoraapis.com
-- User Pool ID: us-east-1_Tmljk4Uiw
-- Client ID: 5cvaao4qgphfp38g433vi5e82u
+```ts
+import { CrittoraClient } from "@crittora/sdk-js";
 
-To use different configuration values, you can set them via environment variables (coming soon).
+const baseClient = new CrittoraClient({
+  credentials: {
+    apiKey: process.env.CRITTORA_API_KEY!,
+  },
+});
 
-## Usage
+const userClient = baseClient.withAuth({
+  type: "bearer",
+  token: userIdToken,
+});
 
-### Authentication
-
-```typescript
-import { Crittora } from "@wutif/crittora";
-
-const crittora = new Crittora();
-
-const username = "your_username";
-const password = "your_password";
-
-crittora
-  .authenticate(username, password)
-  .then((response) => {
-    console.log("Authentication successful");
-    // Store these tokens securely
-    const { IdToken, AccessToken, RefreshToken } = response;
-  })
-  .catch((error) => {
-    console.error("Authentication failed:", error);
-  });
+const decrypted = await userClient.decrypt({
+  encryptedData,
+});
 ```
 
-### Encryption
+## Authentication
 
-```typescript
-const idToken = "your_id_token"; // from authentication
-const data = "sensitive data";
-const permissions = ["permission1", "permission2"]; // optional
+The SDK supports two primary auth patterns:
 
-crittora
-  .encrypt(idToken, data, permissions)
-  .then((encryptedData) => {
-    console.log("Encrypted data:", encryptedData);
-  })
-  .catch((error) => {
-    console.error("Encryption failed:", error);
-  });
+### 1. Static bearer token
+
+Use this when your application already manages a token lifecycle:
+
+```ts
+const client = new CrittoraClient({
+  credentials: { apiKey: "..." },
+  auth: {
+    type: "bearer",
+    token: idToken,
+  },
+});
 ```
 
-### Decryption
+### 2. Cognito auth provider
 
-```typescript
-const idToken = "your_id_token"; // from authentication
-const encryptedData = "encrypted_string";
-const permissions = ["permission1", "permission2"]; // optional
+Use the built-in Cognito provider when the SDK should perform login and hold the returned tokens:
 
-crittora
-  .decrypt(idToken, encryptedData, permissions)
-  .then((decryptedData) => {
-    console.log("Decrypted data:", decryptedData);
-  })
-  .catch((error) => {
-    console.error("Decryption failed:", error);
-  });
+```ts
+import { CrittoraClient, cognitoAuthProvider } from "@crittora/sdk-js";
+
+const auth = cognitoAuthProvider({
+  userPoolId: "us-east-1_Tmljk4Uiw",
+  clientId: "5cvaao4qgphfp38g433vi5e82u",
+});
+
+await auth.login({
+  username: process.env.CRITTORA_USERNAME!,
+  password: process.env.CRITTORA_PASSWORD!,
+});
+
+const client = new CrittoraClient({
+  credentials: {
+    apiKey: process.env.CRITTORA_API_KEY!,
+  },
+  auth,
+});
 ```
 
-### Decrypt-Verify
+### Security note
 
-```typescript
-const idToken = "your_id_token"; // from authentication
-const encryptedData = "encrypted_string";
-const permissions = ["permission1", "permission2"]; // optional
+If `accessKey` and `secretKey` represent privileged backend credentials, do not expose them in untrusted browser code. In that model, use this SDK server-side and front it with your own backend boundary.
 
-crittora
-  .decryptVerify(idToken, encryptedData, permissions)
-  .then((response) => {
-    console.log("Decrypted data:", response.decrypted_data);
-    console.log("Signature valid:", response.is_valid_signature);
-  })
-  .catch((error) => {
-    console.error("Decrypt-verify failed:", error);
-  });
+## Client Configuration
+
+`CrittoraClient` accepts the following options:
+
+```ts
+type CrittoraClientOptions = {
+  baseUrl?: string;
+  credentials?: {
+    apiKey: string;
+    accessKey?: string;
+    secretKey?: string;
+  };
+  auth?: BearerAuthConfig | AuthProvider;
+  fetch?: typeof globalThis.fetch;
+  timeoutMs?: number;
+  retry?: {
+    maxAttempts?: number;
+    backoffMs?: number;
+    retryOn?: number[];
+  };
+  headers?: Record<string, string>;
+  userAgent?: string;
+};
 ```
 
-## Demo Project
+Operational guidance:
 
-For a complete implementation example, check out our [demo project](https://github.com/Crittora/crittora-demo). This project demonstrates:
+- Set `baseUrl` explicitly in non-production environments.
+- Use `fetch` injection in runtimes where global `fetch` is absent or wrapped.
+- Keep retry counts conservative unless the backend contract explicitly supports aggressive retries.
+- Prefer a custom `userAgent` in services where request attribution matters.
 
-- Authentication with AWS Cognito
-- Environment variable management
-- Integration with Crittora's encryption services
-- Basic API endpoints for encryption/decryption
-- Frontend implementation examples
+## Supported Workflows
 
-The demo includes a full web application structure:
+### Confidentiality only
 
-```
-crittora-demo/
-├── public/
-│   ├── css/
-│   ├── js/
-│   └── index.html
-├── test.js
-├── server.js
-├── .env
-└── package.json
-```
+Use `encrypt()` when the recipient only needs to recover the plaintext later:
 
-To get started with the demo:
+```ts
+const encrypted = await client.encrypt({
+  data: "hello",
+});
 
-```bash
-git clone https://github.com/Crittora/crittora-demo.git
-cd crittora-demo
-npm install
+const decrypted = await client.decrypt({
+  encryptedData: encrypted.encryptedData,
+});
 ```
 
-Configure your environment variables and run:
+### Confidentiality plus authenticity
 
-```bash
-npm start
+Use `signEncrypt()` when the recipient must recover the plaintext and validate who signed it:
+
+```ts
+const envelope = await client.signEncrypt({
+  data: "hello",
+});
+
+const verified = await client.decryptVerify({
+  encryptedData: envelope.encryptedData,
+});
 ```
 
-## Error Handling
+## Operations
 
-The SDK provides specific error types for different scenarios:
+### Encrypt
 
-```typescript
-// Base error type
-CrittoraError: General SDK errors with code and status
+```ts
+const result = await client.encrypt({
+  data: "hello",
+  permissions: [
+    {
+      partnerId: "partner-123",
+      actions: ["read", "write"],
+    },
+  ],
+});
 
-// Specific error types
-AuthenticationError: Authentication-related failures
-EncryptionError: Encryption operation failures
-DecryptionError: Decryption operation failures
+console.log(result.encryptedData);
 ```
 
-Example error handling:
+`encrypt()` returns a single org-protected `encryptedData` envelope. The intended follow-up operation is `decrypt()`, which unwraps and decrypts that envelope through the API.
 
-```typescript
+### Sign and encrypt
+
+```ts
+const result = await client.signEncrypt({
+  data: "hello",
+  permissions: [
+    {
+      partnerId: "partner-123",
+      actions: ["read", "write"],
+    },
+  ],
+});
+
+console.log(result.encryptedData);
+```
+
+`signEncrypt()` returns a single org-protected `encryptedData` envelope. The intended follow-up operation is `decryptVerify()`, which decrypts the envelope and validates the stored signature.
+
+### Decrypt
+
+```ts
+const result = await client.decrypt({
+  encryptedData,
+});
+
+console.log(result.decryptedData);
+```
+
+`decrypt()` is the intended follow-up to `encrypt()`. Pass it the exact `encryptedData` envelope returned by `encrypt()`, not the inner ciphertext payload.
+
+### Decrypt and verify
+
+```ts
+const result = await client.decryptVerify({
+  encryptedData,
+});
+
+console.log(result.decryptedData);
+console.log(result.isValidSignature);
+console.log(result.signedBy);
+console.log(result.signedTimestamp);
+```
+
+`decryptVerify()` is the intended follow-up to `signEncrypt()`. Pass it the exact `encryptedData` envelope returned by `signEncrypt()`, not any inner payload.
+
+Public request and response types:
+
+```ts
+type Permission = {
+  partnerId: string;
+  actions: string[];
+};
+
+type EncryptInput = {
+  data: string;
+  permissions?: Permission[];
+};
+
+type EncryptResult = {
+  encryptedData: string;
+};
+
+type SignEncryptInput = {
+  data: string;
+  permissions?: Permission[];
+};
+
+type SignEncryptResult = {
+  encryptedData: string;
+};
+
+type DecryptInput = {
+  encryptedData: string;
+  permissions?: Permission[];
+};
+
+type DecryptResult = {
+  decryptedData: string;
+};
+
+type DecryptVerifyResult = {
+  decryptedData: string;
+  isValidSignature: boolean;
+  signedBy?: string;
+  signedTimestamp?: string;
+  repudiator?: string;
+};
+```
+
+## Errors
+
+The SDK exports a stable error hierarchy:
+
+- `CrittoraError`
+- `ValidationError`
+- `AuthError`
+- `RequestError`
+- `RateLimitError`
+- `EncryptError`
+- `DecryptError`
+
+All errors may carry the following diagnostic fields:
+
+- `code`
+- `status`
+- `requestId`
+- `details`
+- `cause`
+
+Example:
+
+```ts
+import {
+  CrittoraClient,
+  DecryptError,
+  RateLimitError,
+  RequestError,
+} from "@crittora/sdk-js";
+
 try {
-  await crittora.encrypt(idToken, data);
+  await client.decrypt({ encryptedData });
 } catch (error) {
-  if (error instanceof AuthenticationError) {
-    // Handle authentication issues
-  } else if (error instanceof EncryptionError) {
-    // Handle encryption failures
+  if (error instanceof RateLimitError) {
+    // retry later or trigger backpressure
+  } else if (error instanceof DecryptError) {
+    // operation-specific failure
+  } else if (error instanceof RequestError) {
+    // non-2xx or transport-level issue
   } else {
-    // Handle other errors
+    throw error;
   }
 }
 ```
 
-## Types
+## Migration from v1
 
-The SDK exports the following TypeScript interfaces:
+The package still exports the legacy `Crittora` class:
 
-```typescript
-// Authentication
-interface AuthResponse {
-  IdToken: string;
-  AccessToken: string;
-  RefreshToken: string;
-}
-
-// Configuration
-interface CrittoraConfig {
-  cognito_endpoint?: string;
-  base_url?: string;
-  user_pool_id?: string;
-  client_id?: string;
-}
-
-// Operations
-interface EncryptResponse {
-  encrypted_data: string;
-}
-
-interface DecryptResponse {
-  decrypted_data: string;
-}
-
-interface DecryptVerifyResponse {
-  decrypted_data: string;
-  is_valid_signature: boolean;
-}
-
-// Permissions
-interface Permission {
-  partner_id: string;
-  permissions: string[];
-}
-
-// Parameters
-interface BaseParams {
-  data: string;
-  requested_actions: string[];
-  permissions?: Permission[];
-}
-
-interface DecryptParams {
-  encrypted_data: string;
-  transactionId?: string;
-  requested_actions?: string[];
-}
+```ts
+import { Crittora } from "@crittora/sdk-js";
 ```
 
-## Contributing
+That class exists to reduce migration friction, but it should be treated as transitional.
 
-Contributions are welcome! Please open an issue or submit a pull request for any bugs or features.
+Key differences in v2:
 
-## License
+- `new CrittoraClient({...})` replaces implicit singleton construction
+- object-shaped inputs replace positional method arguments
+- camelCase public types replace wire-format snake_case
+- explicit auth providers replace hard-coded request token arguments
+- stable typed errors replace broad wrapping
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Simple mapping:
+
+```ts
+// v1
+await sdk.encrypt(idToken, data, ["read"]);
+
+// v2
+await client.withAuth({ type: "bearer", token: idToken }).encrypt({
+  data,
+  permissions: [
+    {
+      partnerId: "default",
+      actions: ["read"],
+    },
+  ],
+});
+```
+
+## Additional Documentation
+
+- [API Reference](./docs/API.md)
+- [Migration Guide](./docs/MIGRATION.md)
+- [Architecture Notes](./docs/ARCHITECTURE.md)
+- [Release Process](./docs/RELEASING.md)
