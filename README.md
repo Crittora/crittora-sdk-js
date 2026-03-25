@@ -60,7 +60,6 @@ npm run dev
 ```
 
 For more details, see [examples/README.md](examples/README.md).
-
 ## Design Principles
 
 The v2 client is built around a few constraints that matter for SDK consumers:
