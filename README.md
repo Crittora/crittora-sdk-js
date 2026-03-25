@@ -41,6 +41,25 @@ The legacy `Crittora` class is still exported as a compatibility shim for existi
 npm install @crittora/sdk-js
 ```
 
+## Examples
+
+A complete React example application is included in the `examples/` folder. It demonstrates:
+
+- Basic encrypt/decrypt workflows
+- Sign & verify with cryptographic signatures
+- Multiple authentication methods (API Key, Bearer Token, Cognito)
+
+To get started with the example:
+
+```bash
+cd examples
+npm install
+cp .env.example .env
+# Edit .env with your credentials
+npm run dev
+```
+
+For more details, see [examples/README.md](examples/README.md).
 ## Design Principles
 
 The v2 client is built around a few constraints that matter for SDK consumers:

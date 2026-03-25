@@ -1,0 +1,287 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  color: #1a1a2e;
+}
+
+.header p {
+  margin: 0;
+  color: #666;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.tab {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: #f0f0f0;
+}
+
+.tab.active {
+  background: #1a1a2e;
+  color: white;
+}
+
+.content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.demo-section h2 {
+  margin: 0 0 8px;
+  color: #1a1a2e;
+}
+
+.description {
+  color: #666;
+  margin: 0 0 20px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #1a1a2e;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.button-group button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #1a1a2e;
+  color: white;
+}
+
+.button-group button:hover:not(:disabled) {
+  background: #2a2a4e;
+}
+
+.button-group button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-group button.secondary {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.button-group button.secondary:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.button-group button.small {
+  padding: 6px 12px;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.result {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.result label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.result.success {
+  background: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.result.warning {
+  background: #fff3cd;
+  border-color: #ffeeba;
+}
+
+.code {
+  margin: 0;
+  padding: 12px;
+  background: #fff;
+  border-radius: 4px;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.error {
+  padding: 12px 16px;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  color: #721c24;
+  margin: 16px 0;
+}
+
+.warning {
+  padding: 12px 16px;
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  border-radius: 6px;
+  color: #856404;
+  margin-bottom: 16px;
+}
+
+.info {
+  padding: 12px 16px;
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 6px;
+  color: #0c5460;
+  margin-bottom: 16px;
+}
+
+.info-box {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.info-box h4 {
+  margin: 0 0 8px;
+  color: #333;
+}
+
+.info-box p {
+  margin: 0 0 12px;
+  color: #666;
+  font-size: 14px;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.radio-group input[type="radio"] {
+  width: auto;
+}
+
+.verification-status {
+  margin-bottom: 12px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge.valid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge.invalid {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.meta {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #666;
+}
